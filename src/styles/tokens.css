@@ -1,0 +1,125 @@
+/* ============================================================
+   Lad Irrigation — Design System tokens (source of truth)
+   Consolidated faithfully from the delivered design-system/tokens/*.
+   Fonts are loaded in index.html. Swap values here if the kit updates.
+   ============================================================ */
+:root {
+  /* --- Lad Green (primary brand) --- */
+  --green-50: #f1f8e9;
+  --green-100: #ddefc6;
+  --green-200: #c5e49e;
+  --green-300: #a7d772;
+  --green-400: #8fcb56;
+  --green-500: #79c043; /* BASE — the wordmark green */
+  --green-600: #66a836; /* hover */
+  --green-700: #4f8a2a; /* press / ink */
+  --green-800: #3c691f;
+  --green-900: #294916;
+
+  /* --- Lad Navy (dark ground / deep water) --- */
+  --navy-50: #eef2f5;
+  --navy-100: #d3dde4;
+  --navy-200: #a9bbc8;
+  --navy-300: #7892a4;
+  --navy-400: #4d6478;
+  --navy-500: #344c5f;
+  --navy-600: #253746; /* BASE — primary dark surface + headline ink */
+  --navy-700: #1d2b37;
+  --navy-800: #16212a;
+  --navy-900: #0e161d;
+
+  /* --- Neutrals (cool slate) --- */
+  --n-0: #ffffff;
+  --n-50: #f6f7f9;
+  --n-100: #eceff2;
+  --n-150: #e2e6ea;
+  --n-200: #d4dade;
+  --n-300: #bcc4cb;
+  --n-400: #939ea7;
+  --n-500: #6c777f;
+  --n-600: #4f5a63;
+  --n-700: #39434b;
+  --n-800: #283139;
+  --n-900: #1a222a;
+
+  /* --- Semantic accents --- */
+  --water-50: #e7f3fa;
+  --water-100: #c4e2f2;
+  --water-300: #6db9e0;
+  --water-500: #1f8fc4;
+  --water-700: #156a93;
+  --gold-50: #fef6e0;
+  --gold-300: #f7d469;
+  --gold-500: #f2b705;
+  --gold-700: #b88700;
+  --red-500: #d2362f;
+
+  /* Surfaces */
+  --color-bg-page: var(--n-0);
+  --color-bg-subtle: var(--n-50);
+  --color-bg-panel: var(--n-100);
+  --color-surface-card: var(--n-0);
+  --color-surface-dark: var(--navy-600);
+  --color-surface-darker: var(--navy-700);
+
+  /* Text */
+  --text-strong: var(--navy-700);
+  --text-body: var(--n-700);
+  --text-muted: var(--n-500);
+  --text-faint: var(--n-400);
+  --text-on-dark: #ffffff;
+  --text-on-dark-muted: rgba(255, 255, 255, 0.72);
+  --text-link: var(--green-700);
+
+  /* Brand */
+  --brand-primary: var(--green-500);
+  --brand-primary-hover: var(--green-600);
+  --brand-primary-press: var(--green-700);
+  --brand-ink: var(--navy-600);
+  --brand-tint: var(--green-50);
+
+  /* Borders */
+  --border-subtle: rgba(37, 55, 70, 0.08);
+  --border: rgba(37, 55, 70, 0.14);
+  --border-strong: rgba(37, 55, 70, 0.24);
+  --border-on-dark: rgba(255, 255, 255, 0.16);
+  --focus-ring: 0 0 0 3px rgba(121, 192, 67, 0.4);
+
+  /* --- Typography --- */
+  --font-display: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+  --font-sans: 'Barlow', system-ui, -apple-system, sans-serif;
+  --font-semicond: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* --- Spacing (4px grid) --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* --- Elevation --- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+  --shadow-xs: 0 1px 2px rgba(37, 55, 70, 0.06);
+  --shadow-sm: 0 1px 3px rgba(37, 55, 70, 0.08), 0 1px 2px rgba(37, 55, 70, 0.05);
+  --shadow-md: 0 6px 16px rgba(37, 55, 70, 0.1), 0 2px 6px rgba(37, 55, 70, 0.06);
+  --shadow-lg: 0 18px 40px rgba(37, 55, 70, 0.16), 0 6px 14px rgba(37, 55, 70, 0.08);
+  --scrim-bottom: linear-gradient(to top, rgba(14, 22, 29, 0.82) 0%, rgba(14, 22, 29, 0.45) 38%, rgba(14, 22, 29, 0) 78%);
+  --scrim-diag: linear-gradient(105deg, rgba(14, 22, 29, 0.92) 30%, rgba(14, 22, 29, 0.35) 100%);
+}
