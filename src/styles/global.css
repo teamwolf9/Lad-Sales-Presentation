@@ -535,6 +535,339 @@ input[type='checkbox'] {
   accent-color: var(--green-500);
 }
 
+/* Image upload thumbnails */
+.upload-thumb {
+  position: relative;
+  display: inline-flex;
+  margin-bottom: 8px;
+}
+.upload-thumb img {
+  max-height: 90px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.upload-thumb--wide {
+  display: block;
+}
+.upload-thumb--wide img {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+}
+.upload-thumb .icon-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+/* Project line rows (in ProjectEditor) */
+.pline {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 9px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.pline--note {
+  border-style: dashed;
+  opacity: 0.92;
+}
+.pline__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.pline__code {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.pline__notetoggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: rgba(234, 241, 245, 0.6);
+  white-space: nowrap;
+}
+.pline__notetoggle input {
+  width: auto;
+}
+.pline__desc {
+  min-height: 0;
+  margin-bottom: 6px;
+}
+.pline__nums {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr auto;
+  gap: 6px;
+  align-items: center;
+}
+.pline__total {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--green-400);
+  text-align: right;
+  min-width: 70px;
+}
+
+/* Live mini totals */
+.pmini-totals {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 10px;
+  display: grid;
+  gap: 4px;
+}
+.pmini-totals > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: rgba(234, 241, 245, 0.75);
+  font-family: var(--font-mono);
+}
+.pmini-totals__grand {
+  color: #fff !important;
+  font-weight: 700;
+  font-size: 15px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+.pmini-totals__grand span:last-child {
+  color: var(--green-400);
+}
+
+/* Hydraulic calculator */
+.calc {
+  margin: 6px 0 4px;
+}
+.calc__banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(121, 192, 67, 0.12);
+  border: 1px solid rgba(121, 192, 67, 0.35);
+  color: rgba(234, 241, 245, 0.85);
+  font-size: 12.5px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.calc__banner svg {
+  color: var(--green-400);
+  flex: none;
+  margin-top: 1px;
+}
+.calc__banner strong {
+  color: #fff;
+}
+.calc__out {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(14, 22, 29, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.calc__out--wide {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 10px;
+}
+.calc__out > div {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.calc__out > div span:first-child {
+  color: rgba(234, 241, 245, 0.55);
+}
+.calc__out > div span:last-child {
+  color: var(--green-400);
+  font-weight: 500;
+}
+
+/* Calculator picker + cards */
+.calc-pick {
+  margin-bottom: 10px;
+}
+.calc-pick__grp {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green-400);
+  margin-bottom: 6px;
+}
+.calc-card__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  margin-bottom: 2px;
+}
+.calc-card__blurb {
+  font-size: 12px;
+  color: rgba(234, 241, 245, 0.6);
+  line-height: 1.4;
+  margin: 0 0 12px;
+}
+.calc-card__hints {
+  font-size: 10.5px;
+  color: rgba(234, 241, 245, 0.5);
+  line-height: 1.5;
+  margin: 8px 0;
+  font-family: var(--font-mono);
+}
+.calc-card__hints strong {
+  color: rgba(234, 241, 245, 0.7);
+}
+
+/* Account chip in preview bar */
+.account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 4px;
+}
+.account__name {
+  font-size: 12px;
+  color: rgba(223, 232, 238, 0.7);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-loading {
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  color: rgba(234, 241, 245, 0.6);
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+/* ------------------------------ Sign-in gate ------------------------------ */
+.signin {
+  position: relative;
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--navy-800);
+}
+.signin__photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.5;
+}
+.signin__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(150deg, rgba(14, 22, 29, 0.92) 30%, rgba(14, 22, 29, 0.55) 100%);
+}
+.signin__card {
+  position: relative;
+  z-index: 2;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 36px 34px 28px;
+  text-align: center;
+}
+.signin__logo {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 16px;
+}
+.signin__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--text-strong);
+  margin: 0;
+}
+.signin__sub {
+  font-family: var(--font-semicond);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-700);
+  margin: 4px 0 24px;
+}
+.signin__card .btn--ghost {
+  background: #fff;
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+}
+.signin__card .btn--ghost:hover {
+  background: var(--n-50);
+}
+.signin__google {
+  gap: 10px;
+}
+.signin__or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+.signin__or::before,
+.signin__or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.signin__card form {
+  display: grid;
+  gap: 10px;
+}
+.signin__card input {
+  color: var(--ink);
+  background: var(--n-50);
+  border: 1px solid var(--border);
+  text-align: left;
+}
+.signin__card input::placeholder {
+  color: var(--text-faint);
+}
+.signin__card input:focus {
+  background: #fff;
+  border-color: var(--green-500);
+  box-shadow: var(--focus-ring);
+}
+.signin__err {
+  font-size: 12.5px;
+  color: var(--red-500);
+  text-align: left;
+  line-height: 1.4;
+}
+.signin__toggle {
+  margin-top: 16px;
+  background: none;
+  border: none;
+  color: var(--text-link);
+  font-size: 13px;
+  font-family: var(--font-sans);
+}
+.signin__toggle:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 1024px) {
   .app {
     grid-template-columns: 1fr;

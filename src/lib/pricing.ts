@@ -1,4 +1,4 @@
-import type { LineItem, Proposal } from '../types'
+import type { LineItem, Project, ProjectLine, Proposal } from '../types'
 
 export function lineGross(item: LineItem): number {
   return item.quantity * item.unitPrice
@@ -29,4 +29,33 @@ export function computeTotals(p: Proposal): Totals {
   const tax = (subtotal + freight) * (p.settings.taxRate / 100)
   const grandTotal = subtotal + freight + tax
   return { gross, discount, subtotal, freight, tax, grandTotal }
+}
+
+/* -------------------------- Project pricing -------------------------- */
+
+export function projectLineTotal(l: ProjectLine): number {
+  return (l.qty || 0) * (l.unitPrice || 0)
+}
+
+export function projectSubtotal(pr: Project): number {
+  return pr.lines.reduce((s, l) => s + projectLineTotal(l), 0)
+}
+
+export function projectTax(pr: Project): number {
+  return projectSubtotal(pr) * ((pr.taxRate || 0) / 100)
+}
+
+/** Final cost of a project — what the customer sees on the summary line. */
+export function projectTotal(pr: Project): number {
+  return projectSubtotal(pr) + projectTax(pr)
+}
+
+/** Sum of every project's final cost. */
+export function projectsGrandTotal(p: Proposal): number {
+  return p.projects.reduce((s, pr) => s + projectTotal(pr), 0)
+}
+
+/** The headline investment figure: projects if present, else legacy line items. */
+export function investmentTotal(p: Proposal): number {
+  return p.projects.length ? projectsGrandTotal(p) : computeTotals(p).grandTotal
 }

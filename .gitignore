@@ -8,6 +8,15 @@ dist/
 vite.config.js
 vite.config.d.ts
 
+# Firebase
+.env
+.env.local
+.env.*.local
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
 # Raw design-system drop + source archive (reference only, large binaries)
 /design-system/
 *.zip

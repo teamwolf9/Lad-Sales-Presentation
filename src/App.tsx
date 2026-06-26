@@ -3,10 +3,25 @@ import { Builder } from './builder/Builder'
 import { Presentation } from './presentation/Presentation'
 import { SlideDeck } from './presentation/SlideDeck'
 import { ProposalProvider, useProposal } from './state/proposal'
+import { AuthProvider, useAuth } from './lib/auth'
+import { SignIn } from './auth/SignIn'
 import { Icon } from './ui/Icon'
 import { cls } from './lib/util'
 
 type View = 'document' | 'slides'
+
+function AccountChip() {
+  const { enabled, user, signOut } = useAuth()
+  if (!enabled || !user) return null
+  return (
+    <div className="account">
+      <span className="account__name">{user.email || user.displayName || 'Signed in'}</span>
+      <button className="btn btn--ghost btn--sm" onClick={() => signOut()}>
+        Sign out
+      </button>
+    </div>
+  )
+}
 
 function Preview() {
   const { proposal } = useProposal()
@@ -55,6 +70,7 @@ function Preview() {
         </div>
 
         <div className="preview__actions">
+          <AccountChip />
           <input
             type="range"
             min={0.4}
@@ -99,7 +115,11 @@ function Preview() {
   )
 }
 
-export default function App() {
+/** Decides between the sign-in gate and the app (only gates when Firebase is on). */
+function Gate() {
+  const { enabled, ready, user } = useAuth()
+  if (enabled && !ready) return <div className="app-loading">Loading…</div>
+  if (enabled && !user) return <SignIn />
   return (
     <ProposalProvider>
       <div className="app">
@@ -107,5 +127,13 @@ export default function App() {
         <Preview />
       </div>
     </ProposalProvider>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Gate />
+    </AuthProvider>
   )
 }

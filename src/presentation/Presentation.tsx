@@ -3,16 +3,42 @@ import { LAD_BRAND } from '../theme/brand'
 import { SERVICE_CATEGORIES, categoryLabel } from '../data/reference'
 import { LAD_STORES, LAD_HOURS } from '../data/stores'
 import { Icon } from '../ui/Icon'
-import { computeTotals, lineGross, lineNet } from '../lib/pricing'
+import {
+  computeTotals,
+  lineGross,
+  lineNet,
+  projectLineTotal,
+  projectSubtotal,
+  projectTax,
+  projectTotal,
+  investmentTotal,
+} from '../lib/pricing'
+import { tdhAtPump, psiAtPump, hpRequired } from '../lib/hydraulics'
 import { formatCurrency, formatDate, formatNumber } from '../lib/util'
 
 const B = LAD_BRAND
+const round0 = (n: number) => Math.round(n).toLocaleString()
+/** Line rows per detailed project-quote page before continuing onto another. */
+const LINES_PER_PAGE = 13
 
 /** Split an array into chunks of n. */
 function chunk<T>(arr: T[], n: number): T[][] {
   const out: T[][] = []
   for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n))
   return out
+}
+
+/** Horizontal change bar for the Improvements Analysis (red loss / green gain). */
+function ChangeBar({ value, max }: { value: string; max: number }) {
+  const n = parseFloat(value)
+  if (!value || isNaN(n) || max <= 0) return <span className="abar__empty" />
+  const pct = Math.min(100, (Math.abs(n) / max) * 100)
+  return (
+    <span className="abar">
+      <span className={`abar__fill ${n < 0 ? 'abar__fill--neg' : 'abar__fill--pos'}`} style={{ width: `${pct}%` }} />
+      <span className="abar__num">{n > 0 ? `+${n}` : n}</span>
+    </span>
+  )
 }
 
 function Foot({ p, page, total }: { p: Proposal; page: number; total: number }) {
@@ -35,17 +61,39 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
   const activeServices = SERVICE_CATEGORIES.filter((s) => p.services.includes(s.id))
   const itemPages = chunk(p.lineItems, 2)
 
+  // Page visibility
+  const showMap = p.map.enabled && !!p.map.imageUrl
+  const showServices = p.settings.showServices
+  const showAnalysis =
+    p.analysis.enabled && (p.analysis.rows.length > 0 || !!p.analysis.summary || !!p.analysis.conclusion)
   const showAbout = p.settings.showAbout && (p.aboutBody.filter(Boolean).length > 0 || p.team.length > 0)
   const showStores = p.settings.showStores
+  const showSummary = p.settings.showSummary && p.projects.length > 0
+  const detailProjects = p.projects.filter((pr) => pr.showDetail && pr.lines.length > 0)
+  const projectPageGroups = detailProjects.map((pr) => ({ pr, pages: chunk(pr.lines, LINES_PER_PAGE) }))
+  const projectPageCount = projectPageGroups.reduce((s, g) => s + g.pages.length, 0)
+  const grandInvestment = investmentTotal(p)
+
   const contentPages =
-    1 /* services */ +
+    (showMap ? 1 : 0) +
+    (showServices ? 1 : 0) +
+    (showAnalysis ? 1 : 0) +
     (showAbout ? 1 : 0) +
     (showStores ? 1 : 0) +
+    (showSummary ? 1 : 0) +
+    projectPageCount +
     itemPages.length +
     (p.settings.showPricing && p.lineItems.length ? 1 : 0) +
     1 /* terms */
   const totalSheets = 1 /* cover */ + contentPages + 1 /* closing */
   let pageNo = 1
+
+  // Improvements-analysis bar scale (max absolute change across both columns).
+  const analysisMax = p.analysis.rows.reduce((m, r) => {
+    const a = Math.abs(parseFloat(r.exChange) || 0)
+    const b = Math.abs(parseFloat(r.newChange) || 0)
+    return Math.max(m, a, b)
+  }, 0)
 
   const initials = (name: string) =>
     name
@@ -89,10 +137,10 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
                 <div className="k">Valid for</div>
                 <div className="v">{p.meta.validForDays} days</div>
               </div>
-              {p.lineItems.length > 0 && (
+              {(p.projects.length > 0 || p.lineItems.length > 0) && (
                 <div className="cover__metaitem">
                   <div className="k">Investment</div>
-                  <div className="v">{formatCurrency(totals.grandTotal)}</div>
+                  <div className="v">{formatCurrency(grandInvestment)}</div>
                 </div>
               )}
             </div>
@@ -101,7 +149,51 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
         </div>
       </section>
 
+      {/* ----------------------------- FIELD MAP ----------------------------- */}
+      {showMap && (
+        <section className="sheet mapsheet">
+          <div className="mapsheet__imgwrap">
+            <img className="mapsheet__img" src={p.map.imageUrl} alt={p.map.caption || 'Field map'} />
+          </div>
+          <div className="mapsheet__block">
+            <img className="mapsheet__logo" src={B.logos.primary} alt={B.name} />
+            <div className="mapsheet__fields">
+              <div className="mapsheet__f">
+                <span className="k">Customer</span>
+                <span className="v">{p.customer.company || '—'}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Location</span>
+                <span className="v">{p.map.caption || p.customer.location || '—'}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Scale</span>
+                <span className="v">{p.map.scale || '—'}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Quotation / Order #</span>
+                <span className="v">{p.map.quoteNumber || p.meta.number}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Date</span>
+                <span className="v">{formatDate(p.map.date) || formatDate(p.meta.date)}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Designer</span>
+                <span className="v">{p.map.designer || '—'}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Drawn by</span>
+                <span className="v">{p.map.drawnBy || p.map.designer || '—'}</span>
+              </div>
+            </div>
+          </div>
+          <Foot p={p} page={++pageNo} total={totalSheets} />
+        </section>
+      )}
+
       {/* --------------------------- SERVICES + PROOF + SCOPE --------------------------- */}
+      {showServices && (
       <section className="sheet page-subtle">
         <div className="sheet__inner">
           <p className="eyebrow">Turn-key solutions</p>
@@ -157,6 +249,7 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
           <Foot p={p} page={++pageNo} total={totalSheets} />
         </div>
       </section>
+      )}
 
       {/* --------------------------- ABOUT US & TEAM --------------------------- */}
       {showAbout && (
@@ -251,6 +344,239 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
             <Foot p={p} page={++pageNo} total={totalSheets} />
           </div>
         </section>
+      )}
+
+      {/* --------------------------- IMPROVEMENTS ANALYSIS --------------------------- */}
+      {showAnalysis && (
+        <section className="sheet page-subtle">
+          <div className="sheet__inner">
+            <p className="eyebrow">Why upgrade</p>
+            <h2 className="sec-head">{p.analysis.heading || 'Improvements Analysis'}</h2>
+            <div className="ana__meta">
+              {p.analysis.subhead && <span className="ana__sub">{p.analysis.subhead}</span>}
+              {p.analysis.forLine && <span>{p.analysis.forLine}</span>}
+              {p.analysis.byLine && <span>{p.analysis.byLine}</span>}
+            </div>
+            <div className="sec-rule" />
+            {p.analysis.summary && (
+              <p className="lede" style={{ marginBottom: 20 }}>
+                <strong>Summary — </strong>
+                {p.analysis.summary}
+              </p>
+            )}
+
+            <div className="ana__tables">
+              {([
+                { label: p.analysis.existingLabel, isEx: true },
+                { label: p.analysis.newLabel, isEx: false },
+              ] as const).map((col, ci) => (
+                <div className={`ana__col ${col.isEx ? '' : 'ana__col--new'}`} key={ci}>
+                  <div className="ana__coltitle">{col.label}</div>
+                  <div className="ana__unit">{p.analysis.unitLabel}</div>
+                  <table className="ana__table">
+                    <thead>
+                      <tr>
+                        <th>Feature</th>
+                        <th className="num">At point</th>
+                        <th>Change</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {p.analysis.rows.map((r) => (
+                        <tr key={r.id}>
+                          <td>{r.feature}</td>
+                          <td className="num">{col.isEx ? r.exAt : r.newAt}</td>
+                          <td>
+                            <ChangeBar value={col.isEx ? r.exChange : r.newChange} max={analysisMax} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+
+            {p.hydraulics.worksheet.designGpm > 0 && (
+              <div className="ana__basis">
+                <div className="ana__basis-item">
+                  <div className="k">Design GPM</div>
+                  <div className="v">{formatNumber(p.hydraulics.worksheet.designGpm)}</div>
+                </div>
+                <div className="ana__basis-item">
+                  <div className="k">Total dynamic head</div>
+                  <div className="v">{round0(tdhAtPump(p.hydraulics.worksheet))} ft</div>
+                </div>
+                <div className="ana__basis-item">
+                  <div className="k">Pressure @ pump</div>
+                  <div className="v">{round0(psiAtPump(p.hydraulics.worksheet))} psi</div>
+                </div>
+                <div className="ana__basis-item">
+                  <div className="k">HP required</div>
+                  <div className="v">{round0(hpRequired(p.hydraulics.worksheet))} hp</div>
+                </div>
+              </div>
+            )}
+
+            {p.analysis.conclusion && (
+              <p className="lede" style={{ marginTop: 20 }}>
+                <strong>Conclusion — </strong>
+                {p.analysis.conclusion}
+              </p>
+            )}
+            <Foot p={p} page={++pageNo} total={totalSheets} />
+          </div>
+        </section>
+      )}
+
+      {/* --------------------------- INVESTMENT SUMMARY --------------------------- */}
+      {showSummary && (
+        <section className="sheet">
+          <div className="sheet__inner">
+            <div className="sum__head">
+              <div>
+                <p className="eyebrow">Investment summary</p>
+                <h2 className="sec-head">{p.customer.company || 'Your Operation'}</h2>
+                {p.customer.location && <div className="sum__loc">{p.customer.location}</div>}
+                {p.settings.summarySubtitle && <div className="sum__sub">{p.settings.summarySubtitle}</div>}
+              </div>
+              <img className="sum__logo" src={B.logos.primary} alt={B.name} />
+            </div>
+            <div className="sec-rule" />
+
+            <table className="sumtable">
+              <tbody>
+                {p.projects.map((pr) => (
+                  <tr key={pr.id}>
+                    <td className="sumtable__name">
+                      {pr.title || 'Untitled project'}
+                      {pr.location && <span className="sumtable__loc">{pr.location}</span>}
+                    </td>
+                    <td className="sumtable__no">{pr.number}</td>
+                    <td className="num sumtable__amt">{formatCurrency(projectTotal(pr))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="sum__total">
+              <span className="lbl">
+                Total <em>(includes est. tax)</em>
+              </span>
+              <span className="val">{formatCurrency(grandInvestment)}</span>
+            </div>
+
+            {p.payment.enabled && (
+              <div className="payment">
+                <h3 className="payment__title">Payment Schedule</h3>
+                <div className="payment__row">
+                  <span>Down payment due upon approval</span>
+                  <span>{formatCurrency(p.payment.downPayment)}</span>
+                </div>
+                <div className="payment__row">
+                  <span>Progress payments</span>
+                  <span>{formatCurrency(p.payment.progressPayments)}</span>
+                </div>
+                <div className="payment__row">
+                  <span>Estimated due upon invoicing</span>
+                  <span>{formatCurrency(p.payment.dueUponInvoicing)}</span>
+                </div>
+                <div className="payment__row payment__row--total">
+                  <span>Total</span>
+                  <span>
+                    {formatCurrency(p.payment.downPayment + p.payment.progressPayments + p.payment.dueUponInvoicing)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="sum__sign">
+              <div className="sum__thanks">{p.payment.note || 'Thank you for doing business with us!'}</div>
+              <div className="sum__signline">
+                <span>Accepted</span> <span className="sum__x">✕</span>
+              </div>
+            </div>
+            <Foot p={p} page={++pageNo} total={totalSheets} />
+          </div>
+        </section>
+      )}
+
+      {/* --------------------------- PROJECT DETAIL QUOTES --------------------------- */}
+      {projectPageGroups.map(({ pr, pages }) =>
+        pages.map((lines, pi) => (
+          <section className="sheet" key={`${pr.id}-${pi}`}>
+            <div className="sheet__inner">
+              <div className="pq__head">
+                <div>
+                  <p className="eyebrow">Project Quote{pr.number ? ` · ${pr.number}` : ''}</p>
+                  <h2 className="sec-head">
+                    {pr.title || 'Project'}
+                    {pages.length > 1 && (
+                      <span className="pq__cont">
+                        {' '}
+                        (cont. {pi + 1}/{pages.length})
+                      </span>
+                    )}
+                  </h2>
+                  {pr.location && <div className="pq__loc">{pr.location}</div>}
+                </div>
+                <img className="pq__logo" src={B.logos.primary} alt={B.name} />
+              </div>
+              <div className="sec-rule" />
+              {pi === 0 && pr.description && (
+                <p className="lede" style={{ marginBottom: 14 }}>
+                  {pr.description}
+                </p>
+              )}
+              {pi === 0 && pr.mapUrl && (
+                <div className="pq__map">
+                  <img src={pr.mapUrl} alt={pr.title} />
+                </div>
+              )}
+
+              <table className="pqtable">
+                <thead>
+                  <tr>
+                    <th>No.</th>
+                    <th>Description</th>
+                    <th className="num">Qty</th>
+                    <th className="num">Unit price</th>
+                    <th className="num">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((l) => (
+                    <tr key={l.id} className={l.isNote ? 'pqtable__noterow' : ''}>
+                      <td className="pqtable__code">{l.code}</td>
+                      <td>{l.description}</td>
+                      <td className="num">{l.isNote ? '' : `${formatNumber(l.qty)} ${l.unit}`}</td>
+                      <td className="num">{l.isNote ? '' : formatCurrency(l.unitPrice)}</td>
+                      <td className="num">{l.isNote ? '' : formatCurrency(projectLineTotal(l))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {pi === pages.length - 1 && (
+                <div className="totals">
+                  <div className="totals__row">
+                    <span className="lbl">Subtotal</span>
+                    <span className="val">{formatCurrency(projectSubtotal(pr))}</span>
+                  </div>
+                  <div className="totals__row">
+                    <span className="lbl">Sales tax ({pr.taxRate || 0}%)</span>
+                    <span className="val">{formatCurrency(projectTax(pr))}</span>
+                  </div>
+                  <div className="totals__grand">
+                    <span className="lbl">Project total</span>
+                    <span className="val">{formatCurrency(projectTotal(pr))}</span>
+                  </div>
+                </div>
+              )}
+              <Foot p={p} page={++pageNo} total={totalSheets} />
+            </div>
+          </section>
+        )),
       )}
 
       {/* ------------------------- LINE ITEM SHOWCASE ------------------------- */}

@@ -36,6 +36,139 @@ export interface LineItem {
   highlights: string[]
 }
 
+/** One row in a project's quote table (No. / Description / Qty / Unit / Total). */
+export interface ProjectLine {
+  id: string
+  /** "No." column — SKU / part code / category tag (optional). */
+  code: string
+  description: string
+  qty: number
+  unit: string
+  unitPrice: number
+  /** A $0 note/spec sub-line (shown indented, no price emphasis). */
+  isNote: boolean
+}
+
+/**
+ * A Project = one grouped scope of work (Lad's "Project Quote / Project No"),
+ * e.g. "Snakeview River Lift Station" PR01966. It bundles line items into a
+ * single final cost. A proposal can have many projects across farms/sites.
+ */
+export interface Project {
+  id: string
+  /** Project / quote number, e.g. "PR01966". */
+  number: string
+  /** Title, e.g. "Snakeview River Lift Station". */
+  title: string
+  /** Farm / site / location, e.g. "Snake View Farm · Burbank, WA". */
+  location: string
+  /** Short scope sentence shown under the title. */
+  description: string
+  /** Optional per-project image / map (data URL or web URL). */
+  mapUrl: string
+  lines: ProjectLine[]
+  /** Sales-tax rate applied to this project's subtotal (percent). */
+  taxRate: number
+  /** Include a detailed line-item page for this project in the document. */
+  showDetail: boolean
+}
+
+/** One feature row in the Improvements Analysis comparison. */
+export interface AnalysisRow {
+  id: string
+  feature: string
+  /** Existing system: pressure "At Point" and "Change between points". */
+  exAt: string
+  exChange: string
+  /** New design: pressure "At Point" and "Change between points". */
+  newAt: string
+  newChange: string
+}
+
+/**
+ * One pipe run in the friction-loss calculator — mirrors the Lad
+ * "PIPE FRICTION LOSS CALCULATION SHEET" inputs (length, ID, GPM, fall).
+ */
+export interface PipeSegment {
+  id: string
+  label: string
+  /** Length of pipeline (ft). */
+  length: number
+  /** Pipe inside diameter (in). */
+  pipeId: number
+  /** Gallons per minute. */
+  gpm: number
+  /** Hazen-Williams roughness C (PVC ≈ 150, steel ≈ 140). */
+  hazenC: number
+  /** Available fall (ft) — optional, for the safety-margin check. */
+  availableFall: number
+}
+
+/**
+ * The hydraulic worksheet — mirrors the Lad "HYDRAULIC WORKSHEET" (<LOSS):
+ * static + losses + elevation + pivot ht → TDH, PSI, HP.
+ */
+export interface HydraulicWorksheet {
+  staticReqd: number
+  sysLoss: number
+  mlLoss: number
+  elevation: number
+  pivotHt: number
+  miscLosses: number
+  designGpm: number
+}
+
+/** The salesperson's design-calculator inputs (Lad system-design sheet). */
+export interface Hydraulics {
+  segments: PipeSegment[]
+  worksheet: HydraulicWorksheet
+}
+
+/** The generic design-calculator toolkit (acreage, EFLA, pump cost, etc.). */
+export interface DesignToolkit {
+  /** Calculator ids the rep has added to this proposal. */
+  active: string[]
+  /** Per-calculator input values, keyed by calculator id then field key. */
+  values: Record<string, Record<string, number>>
+}
+
+/** The Improvements Analysis page (existing vs. new comparison). */
+export interface Analysis {
+  enabled: boolean
+  heading: string
+  subhead: string
+  forLine: string
+  byLine: string
+  existingLabel: string
+  newLabel: string
+  unitLabel: string
+  summary: string
+  conclusion: string
+  rows: AnalysisRow[]
+}
+
+/** The field-map page (imported JPG/PNG + engineering title block). */
+export interface MapPage {
+  enabled: boolean
+  /** Imported image as a data URL. */
+  imageUrl: string
+  caption: string
+  scale: string
+  designer: string
+  drawnBy: string
+  date: string
+  quoteNumber: string
+}
+
+/** Payment schedule shown under the investment summary. */
+export interface PaymentSchedule {
+  enabled: boolean
+  downPayment: number
+  progressPayments: number
+  dueUponInvoicing: number
+  note: string
+}
+
 /** A person shown on the About Us & Team page. */
 export interface TeamMember {
   id: string
@@ -88,6 +221,12 @@ export interface ProposalSettings {
   showAbout: boolean
   /** Show the store-network / locations page. */
   showStores: boolean
+  /** Show the services / capabilities page. */
+  showServices: boolean
+  /** Show the investment summary (project rollup) page. */
+  showSummary: boolean
+  /** Subtitle under the customer name on the investment summary page. */
+  summarySubtitle: string
 }
 
 export interface Proposal {
@@ -105,6 +244,19 @@ export interface Proposal {
   team: TeamMember[]
   /** Scope / approach paragraphs (one per bullet). */
   scopeNotes: string[]
+  /** Field-map page. */
+  map: MapPage
+  /** Improvements Analysis page. */
+  analysis: Analysis
+  /** Design-calculator inputs (friction loss + hydraulic worksheet). */
+  hydraulics: Hydraulics
+  /** Generic design-calculator toolkit. */
+  design: DesignToolkit
+  /** Grouped project quotes — the core of the costed scope. */
+  projects: Project[]
+  /** Payment schedule shown under the investment summary. */
+  payment: PaymentSchedule
+  /** Legacy flat line items (glossy showcase) — optional / older drafts. */
   lineItems: LineItem[]
   /** Closing terms & conditions paragraphs. */
   terms: string[]

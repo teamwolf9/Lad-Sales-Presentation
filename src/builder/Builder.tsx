@@ -1,19 +1,28 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useProposal } from '../state/proposal'
 import { LAD_BRAND } from '../theme/brand'
-import { SERVICE_CATEGORIES, QUICK_ADD_TEMPLATES, categoryLabel } from '../data/reference'
+import { SERVICE_CATEGORIES } from '../data/reference'
 import { LAD_TEAM, type RosterPerson } from '../data/team'
-import type { LineItem } from '../types'
+import type { Project } from '../types'
 import { Icon } from '../ui/Icon'
 import { uid, formatCurrency, cls } from '../lib/util'
+import { uploadImageFile } from '../lib/uploads'
+import { useAuth } from '../lib/auth'
+import { investmentTotal } from '../lib/pricing'
+import { segLossPsi } from '../lib/hydraulics'
+import type { Hydraulics, PipeSegment, DesignToolkit } from '../types'
 import { Text, Area, Num } from './controls'
-import { LineItemEditor } from './LineItemEditor'
+import { ProjectEditor } from './ProjectEditor'
+import { HydraulicsCalc } from './HydraulicsCalc'
+import { CalculatorToolkit } from './CalculatorToolkit'
 
-const STEPS = ['Setup', 'Customer', 'Services', 'Team', 'Items', 'Pricing'] as const
+const STEPS = ['Setup', 'Customer', 'Services', 'Team', 'Map', 'Design', 'Projects', 'Analysis', 'Summary'] as const
 
 export function Builder() {
   const { proposal, setProposal, reset } = useProposal()
+  const { user } = useAuth()
   const [step, setStep] = useState(0)
+  const mapFileRef = useRef<HTMLInputElement>(null)
   const p = proposal
 
   // ---- field helpers bound to nested proposal objects ----
@@ -21,6 +30,10 @@ export function Builder() {
   const cust = (patch: Partial<typeof p.customer>) => setProposal({ ...p, customer: { ...p.customer, ...patch } })
   const rep = (patch: Partial<typeof p.preparedBy>) => setProposal({ ...p, preparedBy: { ...p.preparedBy, ...patch } })
   const settings = (patch: Partial<typeof p.settings>) => setProposal({ ...p, settings: { ...p.settings, ...patch } })
+  const mapPatch = (patch: Partial<typeof p.map>) => setProposal({ ...p, map: { ...p.map, ...patch } })
+  const analysisPatch = (patch: Partial<typeof p.analysis>) =>
+    setProposal({ ...p, analysis: { ...p.analysis, ...patch } })
+  const paymentPatch = (patch: Partial<typeof p.payment>) => setProposal({ ...p, payment: { ...p.payment, ...patch } })
 
   const toggleService = (id: string) =>
     setProposal({
@@ -28,42 +41,76 @@ export function Builder() {
       services: p.services.includes(id) ? p.services.filter((s) => s !== id) : [...p.services, id],
     })
 
-  // ---- line items ----
-  const addBlank = (kind: LineItem['kind']) =>
+  // ---- projects ----
+  const addProject = () =>
     setProposal({
       ...p,
-      lineItems: [
-        ...p.lineItems,
+      projects: [
+        ...p.projects,
         {
-          id: uid('li'),
-          kind,
-          category: kind === 'service' ? 'install' : 'pivot',
-          name: '',
-          summary: '',
+          id: uid('pr'),
+          number: '',
+          title: '',
+          location: p.customer.location || '',
           description: '',
-          specs: [{ id: uid('sp'), label: '', value: '' }],
-          imageUrl: '',
-          quantity: 1,
-          unit: kind === 'service' ? 'lot' : 'ea',
-          unitPrice: 0,
-          discountPct: 0,
-          highlights: [''],
+          mapUrl: '',
+          lines: [{ id: uid('pl'), code: '', description: '', qty: 1, unit: 'ea', unitPrice: 0, isNote: false }],
+          taxRate: p.settings.taxRate,
+          showDetail: true,
         },
       ],
     })
-  const addTemplate = (ti: number) => {
-    const t = QUICK_ADD_TEMPLATES[ti]
-    setProposal({
-      ...p,
-      lineItems: [
-        ...p.lineItems,
-        { ...t, id: uid('li'), specs: t.specs.map((s) => ({ ...s, id: uid('sp') })), highlights: [...t.highlights] },
+  const updateProject = (id: string, next: Project) =>
+    setProposal({ ...p, projects: p.projects.map((pr) => (pr.id === id ? next : pr)) })
+  const removeProject = (id: string) => setProposal({ ...p, projects: p.projects.filter((pr) => pr.id !== id) })
+
+  // ---- analysis rows ----
+  const addRow = () =>
+    analysisPatch({
+      rows: [...p.analysis.rows, { id: uid('ar'), feature: '', exAt: '', exChange: '', newAt: '', newChange: '' }],
+    })
+  const updateRow = (id: string, patch: Partial<(typeof p.analysis.rows)[number]>) =>
+    analysisPatch({ rows: p.analysis.rows.map((r) => (r.id === id ? { ...r, ...patch } : r)) })
+  const removeRow = (id: string) => analysisPatch({ rows: p.analysis.rows.filter((r) => r.id !== id) })
+
+  // ---- hydraulic calculator ----
+  const hydraulicsChange = (next: Hydraulics) => setProposal({ ...p, hydraulics: next })
+  const designChange = (next: DesignToolkit) => setProposal({ ...p, design: next })
+  const pushSegmentToAnalysis = (seg: PipeSegment) =>
+    analysisPatch({
+      rows: [
+        ...p.analysis.rows,
+        {
+          id: uid('ar'),
+          feature: seg.label || 'Pipe run',
+          exAt: '',
+          exChange: '',
+          newAt: '',
+          newChange: String(Math.round(segLossPsi(seg) * 10) / 10),
+        },
       ],
     })
+
+  const onPickMapImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      mapPatch({ imageUrl: await uploadImageFile(file, user?.uid, 'maps'), enabled: true })
+    } catch {
+      alert('Could not read that image. Try a JPG or PNG.')
+    }
+    e.target.value = ''
   }
-  const updateItem = (id: string, next: LineItem) =>
-    setProposal({ ...p, lineItems: p.lineItems.map((i) => (i.id === id ? next : i)) })
-  const removeItem = (id: string) => setProposal({ ...p, lineItems: p.lineItems.filter((i) => i.id !== id) })
+
+  const autoSplitPayment = () => {
+    const total = investmentTotal(p)
+    paymentPatch({
+      enabled: true,
+      downPayment: Math.round(total * 0.3 * 100) / 100,
+      progressPayments: Math.round(total * 0.5 * 100) / 100,
+      dueUponInvoicing: Math.round(total * 0.2 * 100) / 100,
+    })
+  }
 
   // ---- editable string-array helpers (about body, scope notes, terms) ----
   type StrArrKey = 'scopeNotes' | 'terms' | 'aboutBody'
@@ -308,69 +355,192 @@ export function Builder() {
           </div>
         )}
 
-        {/* ---------------------------- STEP 4 · ITEMS ---------------------------- */}
+        {/* ---------------------------- STEP 4 · MAP ---------------------------- */}
         {step === 4 && (
           <div>
-            <h2 className="section-title">Products &amp; services</h2>
-            <p className="section-hint">Add line items. Start from a quick-add template, then edit everything.</p>
+            <h2 className="section-title">Field map</h2>
+            <p className="section-hint">Import a JPG/PNG site map. It appears as the second page with an engineering title block.</p>
 
-            <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)', marginTop: 0 }}>
-              Quick add
-            </div>
-            <div className="template-grid">
-              {QUICK_ADD_TEMPLATES.map((t, i) => (
-                <button className="template" key={i} onClick={() => addTemplate(i)}>
-                  <span className="template__name">{t.name}</span>
-                  <span className="template__meta">
-                    {categoryLabel(t.category)} · {formatCurrency(t.unitPrice)}/{t.unit}
-                  </span>
+            <label className="chip" style={{ marginBottom: 16 }}>
+              <input
+                type="checkbox"
+                checked={p.map.enabled}
+                onChange={(e) => mapPatch({ enabled: e.target.checked })}
+                style={{ width: 'auto' }}
+              />
+              Include the field-map page
+            </label>
+
+            {p.map.imageUrl ? (
+              <div className="upload-thumb upload-thumb--wide">
+                <img src={p.map.imageUrl} alt="field map" />
+                <button className="icon-btn" onClick={() => mapPatch({ imageUrl: '' })} title="Remove">
+                  <Icon name="trash" size={14} />
                 </button>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, margin: '16px 0' }}>
-              <button className="btn btn--ghost btn--sm" onClick={() => addBlank('product')}>
-                <Icon name="plus" size={14} /> Blank product
-              </button>
-              <button className="btn btn--ghost btn--sm" onClick={() => addBlank('service')}>
-                <Icon name="plus" size={14} /> Blank service
-              </button>
-            </div>
-
-            {p.lineItems.length === 0 ? (
-              <div className="help-empty">No items yet. Add one above — it appears instantly in the preview.</div>
+              </div>
             ) : (
-              p.lineItems.map((item, i) => (
-                <LineItemEditor
-                  key={item.id}
-                  item={item}
-                  index={i}
-                  onChange={(next) => updateItem(item.id, next)}
-                  onRemove={() => removeItem(item.id)}
-                />
-              ))
+              <button className="btn btn--ghost btn--block" onClick={() => mapFileRef.current?.click()}>
+                <Icon name="map" size={15} /> Upload map image (JPG / PNG)
+              </button>
             )}
+            <input ref={mapFileRef} type="file" accept="image/png,image/jpeg" onChange={onPickMapImage} style={{ display: 'none' }} />
+
+            <Text label="Caption" value={p.map.caption} onChange={(v) => mapPatch({ caption: v })} placeholder="e.g. Snake View Pipeline & Pump Replacement" />
+            <div className="field-row">
+              <Text label="Scale" value={p.map.scale} onChange={(v) => mapPatch({ scale: v })} placeholder="1 inch : 600 feet" />
+              <Text label="Quotation / order #" value={p.map.quoteNumber} onChange={(v) => mapPatch({ quoteNumber: v })} />
+            </div>
+            <div className="field-row">
+              <Text label="Designer" value={p.map.designer} onChange={(v) => mapPatch({ designer: v })} />
+              <Text label="Drawn by" value={p.map.drawnBy} onChange={(v) => mapPatch({ drawnBy: v })} />
+            </div>
           </div>
         )}
 
-        {/* ---------------------------- STEP 5 · PRICING ---------------------------- */}
+        {/* ---------------------------- STEP 5 · DESIGN ---------------------------- */}
         {step === 5 && (
           <div>
-            <h2 className="section-title">Pricing &amp; terms</h2>
-            <p className="section-hint">Tax, freight, and the terms shown on the acceptance page.</p>
-            <div className="field-row">
-              <Num label="Tax rate" suffix="%" value={p.settings.taxRate} step={0.1} onChange={(v) => settings({ taxRate: v })} />
-              <Num label="Freight / mobilization" prefix="$" value={p.settings.freight} step={50} onChange={(v) => settings({ freight: v })} />
-            </div>
-            <label className="chip" style={{ marginBottom: 18 }}>
+            <h2 className="section-title">Design calculators</h2>
+            <p className="section-hint">Lad's system-design sheet, built in. Add the calculators this proposal needs — they compute live and can feed the analysis.</p>
+
+            <HydraulicsCalc hydraulics={p.hydraulics} onChange={hydraulicsChange} onPushSegment={pushSegmentToAnalysis} />
+            <CalculatorToolkit design={p.design} onChange={designChange} />
+          </div>
+        )}
+
+        {/* ---------------------------- STEP 6 · PROJECTS ---------------------------- */}
+        {step === 6 && (
+          <div>
+            <h2 className="section-title">Projects</h2>
+            <p className="section-hint">Each project is a group of line items with one final cost. Add a project per pump station, mainline, farm, or scope.</p>
+
+            {p.projects.length === 0 ? (
+              <div className="help-empty">No projects yet. Add one below — it shows on the Investment Summary and gets its own detailed quote page.</div>
+            ) : (
+              p.projects.map((pr, i) => (
+                <ProjectEditor
+                  key={pr.id}
+                  project={pr}
+                  index={i}
+                  uid={user?.uid}
+                  onChange={(next) => updateProject(pr.id, next)}
+                  onRemove={() => removeProject(pr.id)}
+                />
+              ))
+            )}
+            <button className="btn btn--primary btn--block" style={{ marginTop: 8 }} onClick={addProject}>
+              <Icon name="plus" size={15} /> Add project
+            </button>
+          </div>
+        )}
+
+        {/* ---------------------------- STEP 7 · ANALYSIS ---------------------------- */}
+        {step === 7 && (
+          <div>
+            <h2 className="section-title">Improvements analysis</h2>
+            <p className="section-hint">The before / after comparison page. Enter each feature with its existing and new pressures, or push runs from the Design step.</p>
+
+            <label className="chip" style={{ marginBottom: 16 }}>
               <input
                 type="checkbox"
-                checked={p.settings.showPricing}
-                onChange={(e) => settings({ showPricing: e.target.checked })}
+                checked={p.analysis.enabled}
+                onChange={(e) => analysisPatch({ enabled: e.target.checked })}
                 style={{ width: 'auto' }}
               />
-              Include itemized pricing page
+              Include the Improvements Analysis page
             </label>
+
+            <Text label="Heading" value={p.analysis.heading} onChange={(v) => analysisPatch({ heading: v })} />
+            <div className="field-row">
+              <Text label="Sub-head" value={p.analysis.subhead} onChange={(v) => analysisPatch({ subhead: v })} />
+              <Text label="By" value={p.analysis.byLine} onChange={(v) => analysisPatch({ byLine: v })} />
+            </div>
+            <Text label="For (customer line)" value={p.analysis.forLine} onChange={(v) => analysisPatch({ forLine: v })} placeholder="For Frank Tiegs, LLC" />
+            <div className="field-row">
+              <Text label="Existing column" value={p.analysis.existingLabel} onChange={(v) => analysisPatch({ existingLabel: v })} placeholder="EXISTING @ 26,800 GPM" />
+              <Text label="New column" value={p.analysis.newLabel} onChange={(v) => analysisPatch({ newLabel: v })} placeholder="NEW @ 32,000 GPM" />
+            </div>
+            <Area label="Summary" rows={3} value={p.analysis.summary} onChange={(v) => analysisPatch({ summary: v })} />
+            <Area label="Conclusion" rows={3} value={p.analysis.conclusion} onChange={(v) => analysisPatch({ conclusion: v })} />
+
+            <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
+              Feature rows — pressure at point &amp; change to next point
+            </div>
+            {p.analysis.rows.map((r) => (
+              <div className="li-card" key={r.id}>
+                <div className="li-card__head">
+                  <input style={{ fontWeight: 600 }} placeholder="Feature (e.g. River BP Suction)" value={r.feature} onChange={(e) => updateRow(r.id, { feature: e.target.value })} />
+                  <button className="icon-btn" onClick={() => removeRow(r.id)} title="Remove">
+                    <Icon name="trash" size={14} />
+                  </button>
+                </div>
+                <div className="field-row">
+                  <Text label="Existing — at point" value={r.exAt} onChange={(v) => updateRow(r.id, { exAt: v })} />
+                  <Text label="Existing — change" value={r.exChange} onChange={(v) => updateRow(r.id, { exChange: v })} />
+                </div>
+                <div className="field-row">
+                  <Text label="New — at point" value={r.newAt} onChange={(v) => updateRow(r.id, { newAt: v })} />
+                  <Text label="New — change" value={r.newChange} onChange={(v) => updateRow(r.id, { newChange: v })} />
+                </div>
+              </div>
+            ))}
+            <button className="btn btn--ghost btn--sm" onClick={addRow}>
+              <Icon name="plus" size={14} /> Add feature row
+            </button>
+          </div>
+        )}
+
+        {/* ---------------------------- STEP 8 · SUMMARY ---------------------------- */}
+        {step === 8 && (
+          <div>
+            <h2 className="section-title">Summary &amp; terms</h2>
+            <p className="section-hint">The investment rollup, payment schedule, page toggles, and acceptance terms.</p>
+
+            <div className="pmini-totals" style={{ marginTop: 0 }}>
+              <div className="pmini-totals__grand">
+                <span>Total investment</span>
+                <span>{formatCurrency(investmentTotal(p))}</span>
+              </div>
+            </div>
+
+            <Text label="Summary subtitle" value={p.settings.summarySubtitle} onChange={(v) => settings({ summarySubtitle: v })} placeholder="Pump Station & Ancillary Infrastructure Upgrades" />
+
+            <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
+              Payment schedule
+            </div>
+            <label className="chip" style={{ marginBottom: 12 }}>
+              <input type="checkbox" checked={p.payment.enabled} onChange={(e) => paymentPatch({ enabled: e.target.checked })} style={{ width: 'auto' }} />
+              Include payment schedule
+            </label>
+            <div className="field-row">
+              <Num label="Down payment" prefix="$" step={1000} value={p.payment.downPayment} onChange={(v) => paymentPatch({ downPayment: v })} />
+              <Num label="Progress payments" prefix="$" step={1000} value={p.payment.progressPayments} onChange={(v) => paymentPatch({ progressPayments: v })} />
+            </div>
+            <Num label="Due upon invoicing" prefix="$" step={1000} value={p.payment.dueUponInvoicing} onChange={(v) => paymentPatch({ dueUponInvoicing: v })} />
+            <button className="btn btn--ghost btn--sm" onClick={autoSplitPayment}>
+              <Icon name="reset" size={14} /> Auto-split 30 / 50 / 20
+            </button>
+
+            <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
+              Pages to include
+            </div>
+            <div className="chips">
+              {([
+                ['showServices', 'Services'],
+                ['showAbout', 'About & team'],
+                ['showStores', 'Locations'],
+                ['showSummary', 'Investment summary'],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  className={cls('chip', p.settings[key] && 'chip--on')}
+                  onClick={() => settings({ [key]: !p.settings[key] } as Partial<typeof p.settings>)}
+                >
+                  <span className="chip__dot" />
+                  {label}
+                </button>
+              ))}
+            </div>
 
             <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
               Terms &amp; conditions
