@@ -229,6 +229,47 @@ export interface ProposalSettings {
   summarySubtitle: string
 }
 
+/* ----------------------------- Multi-user ----------------------------- */
+
+/** Organisation-wide role controlling what a user can do across the app. */
+export type OrgRole = 'admin' | 'creator' | 'viewer'
+
+/** A user in the directory (users/{uid}). */
+export interface UserProfile {
+  uid: string
+  email: string
+  displayName: string
+  role: OrgRole
+  disabled: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+/** Per-proposal access granted to an invited user. */
+export type ShareRole = 'editor' | 'viewer'
+
+/**
+ * A stored proposal (proposals/{id}). Holds metadata, the membership map, and
+ * the full proposal payload under `data`.
+ */
+export interface ProposalRecord {
+  id: string
+  ownerUid: string
+  ownerEmail: string
+  /** Denormalised for the dashboard list. */
+  title: string
+  customerCompany: string
+  number: string
+  createdAt: number
+  updatedAt: number
+  /** Invited members: uid → access. Owner is implicit (full control). */
+  roles: Record<string, ShareRole>
+  /** [ownerUid, ...invited uids] — enables array-contains queries + rules. */
+  memberUids: string[]
+  /** The full proposal payload. */
+  data: Proposal
+}
+
 export interface Proposal {
   meta: ProposalMeta
   customer: CustomerInfo

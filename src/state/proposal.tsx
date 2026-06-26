@@ -2,8 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { Proposal } from '../types'
 import { DEFAULT_TERMS, DEFAULT_ABOUT_HEADING, DEFAULT_ABOUT_BODY } from '../data/reference'
 import { todayISO } from '../lib/util'
-import { useAuth } from '../lib/auth'
-import { loadCloudProposal, saveCloudProposal } from '../lib/cloud'
+import { watchProposal, saveProposalData } from '../lib/proposals'
 
 const STORAGE_KEY = 'lad-proposal-draft-v1'
 
@@ -113,6 +112,8 @@ interface ProposalCtx {
   /** Patch the top-level proposal object. */
   patch: (p: Partial<Proposal>) => void
   reset: () => void
+  /** True when the signed-in user only has view access. */
+  readOnly: boolean
 }
 
 const Ctx = createContext<ProposalCtx | null>(null)
@@ -149,59 +150,74 @@ function load(): Proposal {
   return base
 }
 
-export function ProposalProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
-  const [proposal, setProposal] = useState<Proposal>(load)
+/**
+ * Provides the active proposal.
+ * - Standalone (no `proposalId`): a single draft cached in localStorage.
+ * - Cloud (`proposalId` set): bound to proposals/{id}, live-synced; saves are
+ *   debounced and skipped when `readOnly` (viewer access).
+ */
+export function ProposalProvider({
+  proposalId,
+  readOnly = false,
+  children,
+}: {
+  proposalId?: string
+  readOnly?: boolean
+  children: ReactNode
+}) {
+  const [proposal, setProposal] = useState<Proposal>(() => (proposalId ? createEmptyProposal() : load()))
+  const [loaded, setLoaded] = useState(!proposalId)
+  const lastSynced = useRef<string | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  /** Skip the cloud write that immediately follows a cloud load. */
-  const justLoaded = useRef(false)
 
-  // Always cache locally (offline + standalone).
+  // Standalone: cache to localStorage.
   useEffect(() => {
+    if (proposalId) return
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(proposal))
     } catch {
       /* storage full / unavailable — non-fatal */
     }
-  }, [proposal])
+  }, [proposal, proposalId])
 
-  // On sign-in, pull this user's cloud draft (if any).
+  // Cloud: live-subscribe to the proposal document.
   useEffect(() => {
-    if (!user) return
-    let cancelled = false
-    loadCloudProposal(user.uid)
-      .then((cloud) => {
-        if (!cancelled && cloud) {
-          justLoaded.current = true
-          setProposal({ ...createEmptyProposal(), ...cloud })
+    if (!proposalId) return
+    setLoaded(false)
+    const unsub = watchProposal(proposalId, (rec) => {
+      if (rec) {
+        const incoming = JSON.stringify(rec.data)
+        if (incoming !== lastSynced.current) {
+          lastSynced.current = incoming
+          setProposal({ ...createEmptyProposal(), ...rec.data })
         }
-      })
-      .catch((e) => console.error('[cloud] load failed', e))
-    return () => {
-      cancelled = true
-    }
-  }, [user])
+      }
+      setLoaded(true)
+    })
+    return () => unsub()
+  }, [proposalId])
 
-  // Debounced cloud save while signed in.
+  // Cloud: debounced save of local edits (skips our own echo + read-only).
   useEffect(() => {
-    if (!user) return
-    if (justLoaded.current) {
-      justLoaded.current = false
-      return
-    }
+    if (!proposalId || !loaded || readOnly) return
+    const cur = JSON.stringify(proposal)
+    if (cur === lastSynced.current) return
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
-      saveCloudProposal(user.uid, proposal).catch((e) => console.error('[cloud] save failed', e))
-    }, 900)
+      lastSynced.current = cur
+      saveProposalData(proposalId, proposal).catch((e) => console.error('[cloud] save failed', e))
+    }, 800)
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
     }
-  }, [proposal, user])
+  }, [proposal, proposalId, loaded, readOnly])
 
   const patch = (p: Partial<Proposal>) => setProposal((prev) => ({ ...prev, ...p }))
   const reset = () => setProposal(createEmptyProposal())
 
-  return <Ctx.Provider value={{ proposal, setProposal, patch, reset }}>{children}</Ctx.Provider>
+  if (proposalId && !loaded) return <div className="app-loading">Loading proposal…</div>
+
+  return <Ctx.Provider value={{ proposal, setProposal, patch, reset, readOnly }}>{children}</Ctx.Provider>
 }
 
 export function useProposal(): ProposalCtx {

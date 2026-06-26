@@ -1,23 +1,54 @@
 rules_version = '2';
 
-// Lad Sales Presentation — Firestore security rules.
-// Each user owns their proposals under users/{uid}/proposals/*.
+// Lad Sales Presentation — Firestore security rules (multi-user).
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
+    function signedIn() { return request.auth != null; }
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function isAdmin() { return signedIn() && myRole() == 'admin'; }
+    function isCreator() { return signedIn() && (myRole() == 'admin' || myRole() == 'creator'); }
+    // Bootstrap admin — keep in sync with src/lib/config.ts ADMIN_EMAILS.
+    function isBootstrapAdmin() {
+      return signedIn() && request.auth.token.email == 'teamwolf9@gmail.com';
     }
 
-    // A user's own proposal drafts (the current draft lives at .../proposals/current).
-    match /users/{uid}/proposals/{docId} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+    // ---- User directory ----
+    match /users/{uid} {
+      allow read: if signedIn();
+      // Self-provision on first sign-in: viewer by default, admin only for the
+      // bootstrap admin email.
+      allow create: if signedIn() && request.auth.uid == uid
+        && (request.resource.data.role == 'viewer'
+            || (isBootstrapAdmin() && request.resource.data.role == 'admin'));
+      // Admins manage anyone; a user may edit their own profile but not their
+      // own role or disabled flag.
+      allow update: if isAdmin()
+        || (signedIn() && request.auth.uid == uid
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.disabled == resource.data.disabled);
+      allow delete: if isAdmin();
     }
 
-    // Optional future: a shared org-wide proposals collection.
-    // A proposal is readable/writable by its owner; tighten/extend as needed.
+    // ---- Proposals ----
     match /proposals/{id} {
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow read, update, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow read: if signedIn() && request.auth.uid in resource.data.memberUids;
+      // Only admins/creators may create, and the new doc must be owned by them
+      // with membership limited to themselves.
+      allow create: if isCreator()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.memberUids.hasOnly([request.auth.uid]);
+      // Owner: full control. Editor: may change content but not ownership or
+      // the sharing membership.
+      allow update: if signedIn() && (
+          resource.data.ownerUid == request.auth.uid
+          || (resource.data.roles[request.auth.uid] == 'editor'
+              && request.resource.data.ownerUid == resource.data.ownerUid
+              && request.resource.data.roles == resource.data.roles
+              && request.resource.data.memberUids == resource.data.memberUids)
+        );
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
     }
   }
 }
