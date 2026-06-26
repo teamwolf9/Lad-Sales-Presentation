@@ -41,7 +41,7 @@ export function createEmptyProposal(): Proposal {
     ],
     lineItems: [],
     terms: [...DEFAULT_TERMS],
-    settings: { taxRate: 8.4, freight: 0, showPricing: true, showAbout: true },
+    settings: { taxRate: 8.4, freight: 0, showPricing: true, showAbout: true, showStores: true },
   }
 }
 

@@ -45,6 +45,8 @@ export interface TeamMember {
   photoUrl: string
   /** Optional one-line credential / focus (e.g. "20 yrs · Pump systems"). */
   credential: string
+  /** Optional short bio (1–2 sentences) shown on the team page. */
+  bio: string
 }
 
 export interface CustomerInfo {
@@ -84,6 +86,8 @@ export interface ProposalSettings {
   showPricing: boolean
   /** Show the About Us & Team page. */
   showAbout: boolean
+  /** Show the store-network / locations page. */
+  showStores: boolean
 }
 
 export interface Proposal {

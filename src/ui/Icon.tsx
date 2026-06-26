@@ -57,11 +57,26 @@ const P: Record<string, JSX.Element> = {
   ),
   filter: <path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z" />,
   drop: <path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z" />,
+  phone: (
+    <path d="M6.5 3h3l1.5 4-2 1.5a12 12 0 0 0 5 5L15.5 11l4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4.5 5.2 2 2 0 0 1 6.5 3Z" />
+  ),
+  pin: (
+    <>
+      <path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12Z" />
+      <circle cx="12" cy="9" r="2.6" />
+    </>
+  ),
   // UI
   plus: <path d="M12 5v14M5 12h14" />,
   trash: (
     <>
       <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
+    </>
+  ),
+  slides: (
+    <>
+      <rect x="3" y="4" width="18" height="13" rx="1.5" />
+      <path d="M12 17v3M9 20h6" />
     </>
   ),
   print: (

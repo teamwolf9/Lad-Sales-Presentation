@@ -1,0 +1,654 @@
+/**
+ * On-screen slide deck styling — 16:9 slides at 1280×720px that mirror the
+ * PowerPoint export. Uses the shared brand tokens from tokens.css.
+ */
+/* View toggle (Document / Slides) in the preview bar */
+.viewtoggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-pill);
+}
+.viewtoggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: rgba(223, 232, 238, 0.75);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.viewtoggle__btn:hover {
+  color: #fff;
+}
+.viewtoggle__btn--on {
+  background: var(--green-500);
+  color: #0e161d;
+}
+
+/* Hide the document layer on screen while the slide deck is showing — but
+   still let it print (the print media query never matches this rule). */
+@media screen {
+  .is-hidden-screen {
+    display: none;
+  }
+}
+
+.slide {
+  position: relative;
+  width: 1280px;
+  height: 720px;
+  background: var(--color-bg-page, #fff);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  box-shadow: var(--shadow-lg, 0 20px 60px rgba(14, 22, 29, 0.35));
+  border-radius: 4px;
+  overflow: hidden;
+  padding: 56px 64px 48px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Section header */
+.slide__head {
+  flex-shrink: 0;
+}
+.slide__eyebrow {
+  font-family: var(--font-semicond, var(--font-body));
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green-600);
+  margin: 0;
+}
+.slide__title {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1.05;
+  color: var(--text-strong);
+  margin: 6px 0 0;
+}
+.slide__rule {
+  display: block;
+  width: 64px;
+  height: 5px;
+  background: var(--green-500);
+  border-radius: 3px;
+  margin: 16px 0 22px;
+}
+.slide-lede {
+  font-size: 21px;
+  line-height: 1.5;
+  color: var(--text-body);
+  margin: 0 0 6px;
+  max-width: 80ch;
+}
+.slide-subeyebrow {
+  font-family: var(--font-semicond, var(--font-body));
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-600);
+  margin: 22px 0 14px;
+}
+.slide__foot {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-top: 18px;
+}
+.slide__foot strong {
+  color: var(--text-body);
+}
+
+/* ------------------------------ COVER ------------------------------ */
+.slide--cover {
+  padding: 0;
+  background: var(--navy-900);
+  color: #fff;
+}
+.slide-cover__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.slide-cover__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(14, 22, 29, 0.45) 0%, rgba(14, 22, 29, 0.35) 45%, rgba(14, 22, 29, 0.86) 100%);
+}
+.slide-cover__top {
+  position: absolute;
+  top: 44px;
+  left: 64px;
+  right: 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.slide-cover__logo {
+  width: 116px;
+  height: auto;
+}
+.slide-cover__date {
+  text-align: right;
+  font-size: 15px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.92);
+}
+.slide-cover__center {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  bottom: 196px;
+}
+.slide-cover__eyebrow {
+  font-family: var(--font-semicond, var(--font-body));
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green-400);
+  margin-bottom: 14px;
+}
+.slide-cover__title {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 60px;
+  line-height: 1.02;
+  margin: 0 0 22px;
+  max-width: 18ch;
+}
+.slide-cover__for {
+  font-family: var(--font-semicond, var(--font-body));
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(201, 211, 218, 0.95);
+}
+.slide-cover__company {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 32px;
+  margin-top: 4px;
+}
+.slide-cover__loc {
+  font-size: 17px;
+  color: rgba(201, 211, 218, 0.95);
+  margin-top: 2px;
+}
+.slide-cover__bottom {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  bottom: 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.slide-cover__meta {
+  display: flex;
+  gap: 56px;
+}
+.slide-cover__metaitem .k {
+  font-family: var(--font-semicond, var(--font-body));
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green-400);
+}
+.slide-cover__metaitem .v {
+  font-size: 21px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.slide-cover__badge {
+  height: 56px;
+  width: auto;
+}
+
+/* ----------------------------- SERVICES ----------------------------- */
+.slide-svc {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 14px;
+}
+.slide-svc__card {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-left: 5px solid var(--green-500);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 18px 20px;
+}
+.slide-svc__card h3 {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--text-strong);
+  margin: 0 0 6px;
+}
+.slide-svc__card p {
+  font-size: 15.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  margin: 0;
+}
+.slide-proof {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 28px;
+  padding-top: 8px;
+}
+.slide-proof__item .big {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 38px;
+  color: var(--green-700);
+  line-height: 1;
+}
+.slide-proof__item .lbl {
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* --------------------------- ABOUT & TEAM --------------------------- */
+.slide-about {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 32px;
+  align-items: start;
+}
+.slide-about__text p {
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--text-body);
+  margin: 0 0 12px;
+}
+.slide-about__photo {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  height: 240px;
+}
+.slide-about__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.slide-team {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.slide-member {
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 16px;
+  text-align: center;
+}
+.slide-member__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-lg);
+  margin: 0 auto 10px;
+  background: var(--green-50);
+  color: var(--green-700);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 24px;
+}
+.slide-member__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.slide-member__name {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-strong);
+  line-height: 1.1;
+}
+.slide-member__title {
+  font-size: 14px;
+  color: var(--brand-primary-press);
+  font-weight: 600;
+  margin-top: 3px;
+}
+.slide-member__cred {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* ----------------------------- LOCATIONS ----------------------------- */
+.slide-stores {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 8px;
+}
+.slide-store {
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+}
+.slide-store--hq {
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 1px var(--green-500), var(--shadow-sm);
+}
+.slide-store__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.slide-store__city {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-strong);
+}
+.slide-store__tag {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--green-700);
+  background: var(--green-50);
+  border-radius: var(--radius-pill);
+  padding: 3px 8px;
+}
+.slide-store__addr {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.slide-store__phone {
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--brand-primary-press);
+  margin-top: 8px;
+}
+.slide-hours {
+  margin-top: 18px;
+  padding: 12px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--green-50);
+  color: var(--text-body);
+  font-size: 15.5px;
+  text-align: center;
+}
+.slide-hours strong {
+  color: var(--text-strong);
+}
+
+/* ----------------------------- EQUIPMENT ----------------------------- */
+.slide-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px;
+  flex: 1;
+  min-height: 0;
+}
+.slide-item--noimg {
+  grid-template-columns: 1fr;
+}
+.slide-item__media {
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.slide-item__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.slide-item__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.slide-item__cat {
+  font-family: var(--font-semicond, var(--font-body));
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-600);
+}
+.slide-item__name {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--text-strong);
+  line-height: 1.08;
+  margin: 6px 0 0;
+}
+.slide-item__summary {
+  font-size: 18px;
+  font-style: italic;
+  color: var(--brand-primary-press);
+  margin: 12px 0 0;
+}
+.slide-item__desc {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text-body);
+  margin: 12px 0 0;
+}
+.slide-item__specs {
+  margin-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+.slide-item__spec {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 15px;
+}
+.slide-item__spec .k {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.slide-item__spec .v {
+  color: var(--text-strong);
+  text-align: right;
+}
+.slide-item__hl {
+  margin: 16px 0 0;
+  padding: 0 0 0 18px;
+}
+.slide-item__hl li {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-body);
+  margin-bottom: 5px;
+}
+.slide-item__price {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+.slide-item__price .qty {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.slide-item__price .amt {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 26px;
+  color: var(--green-700);
+}
+
+/* ----------------------------- PRICING ----------------------------- */
+.slide-ptable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15.5px;
+}
+.slide-ptable th {
+  background: var(--navy-700);
+  color: #fff;
+  text-align: left;
+  padding: 11px 14px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.slide-ptable th.num,
+.slide-ptable td.num {
+  text-align: right;
+}
+.slide-ptable td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-body);
+}
+.slide-ptable tbody tr td:first-child {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.slide-totals {
+  margin-top: 18px;
+  margin-left: auto;
+  width: 380px;
+}
+.slide-totals .row {
+  display: flex;
+  justify-content: space-between;
+  padding: 7px 0;
+  font-size: 15.5px;
+  color: var(--text-body);
+}
+.slide-totals .row.disc span:last-child {
+  color: var(--green-700);
+}
+.slide-totals .row.grand {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 2px solid var(--navy-700);
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--text-strong);
+}
+.slide-totals .row.grand span:last-child {
+  color: var(--green-700);
+}
+.slide-totals .valid {
+  text-align: right;
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* ------------------------------ TERMS ------------------------------ */
+.slide-terms {
+  margin: 0;
+  padding: 0 0 0 20px;
+  flex: 1;
+}
+.slide-terms li {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text-body);
+  margin-bottom: 13px;
+}
+.slide-sign {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 12px;
+}
+.slide-sign__line {
+  border-top: 1px solid var(--navy-700);
+  padding-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+/* ----------------------------- CLOSING ----------------------------- */
+.slide--closing {
+  background: radial-gradient(120% 80% at 80% 0%, rgba(121, 192, 67, 0.12), transparent), var(--navy-900);
+  color: #fff;
+  justify-content: center;
+  padding: 64px 72px;
+}
+.slide-closing__logo {
+  width: 150px;
+  height: auto;
+  margin-bottom: 28px;
+}
+.slide-closing__eyebrow {
+  font-family: var(--font-semicond, var(--font-body));
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--green-400);
+}
+.slide-closing__title {
+  font-family: var(--font-display, serif);
+  font-weight: 700;
+  font-size: 56px;
+  margin: 10px 0 18px;
+}
+.slide-closing__body {
+  font-size: 18px;
+  line-height: 1.5;
+  color: rgba(201, 211, 218, 0.95);
+  max-width: 62ch;
+  margin: 0 0 36px;
+}
+.slide-closing__contact {
+  display: flex;
+  gap: 64px;
+}
+.slide-closing__contact .k {
+  font-family: var(--font-semicond, var(--font-body));
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green-400);
+}
+.slide-closing__contact .v {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 4px;
+}

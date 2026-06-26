@@ -1,6 +1,7 @@
 import type { Proposal } from '../types'
 import { LAD_BRAND } from '../theme/brand'
 import { SERVICE_CATEGORIES, categoryLabel } from '../data/reference'
+import { LAD_STORES, LAD_HOURS } from '../data/stores'
 import { Icon } from '../ui/Icon'
 import { computeTotals, lineGross, lineNet } from '../lib/pricing'
 import { formatCurrency, formatDate, formatNumber } from '../lib/util'
@@ -35,9 +36,11 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
   const itemPages = chunk(p.lineItems, 2)
 
   const showAbout = p.settings.showAbout && (p.aboutBody.filter(Boolean).length > 0 || p.team.length > 0)
+  const showStores = p.settings.showStores
   const contentPages =
     1 /* services */ +
     (showAbout ? 1 : 0) +
+    (showStores ? 1 : 0) +
     itemPages.length +
     (p.settings.showPricing && p.lineItems.length ? 1 : 0) +
     1 /* terms */
@@ -124,8 +127,8 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
               <div className="proof__lbl">Family-founded in Moses Lake. Employee-owned today.</div>
             </div>
             <div className="proof__item">
-              <div className="proof__big">8</div>
-              <div className="proof__lbl">Stores across eastern Washington, close to your field.</div>
+              <div className="proof__big">{LAD_STORES.length}</div>
+              <div className="proof__lbl">Locations across Washington &amp; Colorado, close to your field.</div>
             </div>
             <div className="proof__item">
               <div className="proof__big">#1</div>
@@ -180,20 +183,70 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
                 <p className="eyebrow" style={{ marginTop: 36, marginBottom: 14 }}>
                   The team on your project
                 </p>
-                <div className={`team team--${Math.min(p.team.length, 4)}`}>
+                <div className={`team ${p.team.length === 1 ? 'team--single' : ''}`}>
                   {p.team.map((m) => (
                     <div className="member" key={m.id}>
                       <div className="member__avatar">
                         {m.photoUrl ? <img src={m.photoUrl} alt={m.name} /> : <span>{initials(m.name) || '—'}</span>}
                       </div>
-                      <div className="member__name">{m.name || 'Team member'}</div>
-                      {m.title && <div className="member__title">{m.title}</div>}
-                      {m.credential && <div className="member__cred">{m.credential}</div>}
+                      <div className="member__info">
+                        <div className="member__name">{m.name || 'Team member'}</div>
+                        {m.title && <div className="member__title">{m.title}</div>}
+                        {m.credential && <div className="member__cred">{m.credential}</div>}
+                        {m.bio && <p className="member__bio">{m.bio}</p>}
+                      </div>
                     </div>
                   ))}
                 </div>
               </>
             )}
+
+            <Foot p={p} page={++pageNo} total={totalSheets} />
+          </div>
+        </section>
+      )}
+
+      {/* --------------------------- STORE NETWORK --------------------------- */}
+      {showStores && (
+        <section className="sheet page-subtle">
+          <div className="sheet__inner">
+            <p className="eyebrow">Always close by</p>
+            <h2 className="sec-head">{LAD_STORES.length} locations, near your field.</h2>
+            <div className="sec-rule" />
+            <p className="lede">
+              Parts, service, and support are never far away. With stores across Washington and Colorado, a Lad crew is
+              close when you need one — in season or out.
+            </p>
+
+            <div className="stores">
+              {LAD_STORES.map((s) => (
+                <div className={`store ${s.hq ? 'store--hq' : ''}`} key={s.city + s.state}>
+                  <div className="store__head">
+                    <h3 className="store__city">{s.city}</h3>
+                    {s.hq && <span className="store__tag">Headquarters</span>}
+                  </div>
+                  {s.address ? (
+                    <div className="store__addr">
+                      {s.address}
+                      <br />
+                      {s.city}, {s.state} {s.zip}
+                    </div>
+                  ) : (
+                    <div className="store__addr">{s.city}, {s.state}</div>
+                  )}
+                  <a className="store__phone" href={`tel:${s.phone.replace(/[^\d]/g, '')}`}>
+                    <Icon name="phone" size={13} /> {s.phone}
+                  </a>
+                </div>
+              ))}
+            </div>
+
+            <div className="stores__hours">
+              <Icon name="check" size={14} />
+              <span>
+                <strong>Store hours</strong> · {LAD_HOURS.weekday} · {LAD_HOURS.saturday}
+              </span>
+            </div>
 
             <Foot p={p} page={++pageNo} total={totalSheets} />
           </div>

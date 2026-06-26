@@ -50,7 +50,7 @@ export const LAD_BRAND: Brand = {
     phone: '(509) 547-1623',
     website: 'ladirrigation.com',
     region: 'Columbia Basin · Eastern Washington',
-    storesNote: '8 stores across eastern WA',
+    storesNote: '9 locations · WA & CO',
   },
   logos: {
     primary: 'brand/logos/lad-badge-green.png',

@@ -79,7 +79,7 @@ export function Builder() {
       ...p,
       team: [
         ...p.team,
-        { id: uid('tm'), name: '', title: '', photoUrl: '', credential: '', ...seed },
+        { id: uid('tm'), name: '', title: '', photoUrl: '', credential: '', bio: '', ...seed },
       ],
     })
   const updateMember = (id: string, patch: Partial<import('../types').TeamMember>) =>
@@ -89,7 +89,7 @@ export function Builder() {
   const toggleRoster = (person: RosterPerson) =>
     inTeam(person.name)
       ? setProposal({ ...p, team: p.team.filter((m) => m.name !== person.name) })
-      : addMember({ name: person.name, title: person.title, photoUrl: person.photo })
+      : addMember({ name: person.name, title: person.title, credential: person.credential, bio: person.bio, photoUrl: person.photo })
 
   return (
     <aside className="builder">
@@ -204,15 +204,26 @@ export function Builder() {
             <h2 className="section-title">About us &amp; team</h2>
             <p className="section-hint">Your company story and the people on this project. Pre-filled in Lad's voice — edit freely.</p>
 
-            <label className="chip" style={{ marginBottom: 16 }}>
-              <input
-                type="checkbox"
-                checked={p.settings.showAbout}
-                onChange={(e) => settings({ showAbout: e.target.checked })}
-                style={{ width: 'auto' }}
-              />
-              Include the About Us &amp; Team page
-            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              <label className="chip">
+                <input
+                  type="checkbox"
+                  checked={p.settings.showAbout}
+                  onChange={(e) => settings({ showAbout: e.target.checked })}
+                  style={{ width: 'auto' }}
+                />
+                Include the About Us &amp; Team page
+              </label>
+              <label className="chip">
+                <input
+                  type="checkbox"
+                  checked={p.settings.showStores}
+                  onChange={(e) => settings({ showStores: e.target.checked })}
+                  style={{ width: 'auto' }}
+                />
+                Include the Locations page
+              </label>
+            </div>
 
             <Text label="About heading" value={p.aboutHeading} onChange={(v) => setProposal({ ...p, aboutHeading: v })} />
             <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
@@ -276,6 +287,7 @@ export function Builder() {
                     <Text label="Title" value={m.title} onChange={(v) => updateMember(m.id, { title: v })} />
                   </div>
                   <Text label="Credential / focus (optional)" value={m.credential} onChange={(v) => updateMember(m.id, { credential: v })} placeholder="e.g. 20 yrs · Pump systems" />
+                  <Area label="Short bio (optional)" rows={2} value={m.bio} onChange={(v) => updateMember(m.id, { bio: v })} placeholder="1–2 sentences about this person." />
                   <Text label="Headshot URL (optional)" value={m.photoUrl} onChange={(v) => updateMember(m.id, { photoUrl: v })} placeholder="https://…" />
                 </div>
               ))
