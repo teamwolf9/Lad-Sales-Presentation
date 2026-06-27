@@ -5,11 +5,12 @@ import { cls } from '../lib/util'
 import { Dashboard } from './Dashboard'
 import { AdminUsers } from './AdminUsers'
 import { EditorView } from './EditorView'
+import { AccountInfo } from './AccountInfo'
 
 type OpenProposal = { id: string; title: string; readOnly: boolean }
 
 export function AppShell() {
-  const { profile, signOut } = useAuth()
+  const { profile } = useAuth()
   const [view, setView] = useState<'dashboard' | 'admin'>('dashboard')
   const [open, setOpen] = useState<OpenProposal | null>(null)
 
@@ -44,13 +45,7 @@ export function AppShell() {
             </button>
           )}
         </nav>
-        <div className="appnav__acct">
-          {profile && <span className={`appnav__role appnav__role--${profile.role}`}>{profile.role}</span>}
-          <span className="appnav__email">{profile?.email}</span>
-          <button className="btn btn--ghost btn--sm" onClick={() => signOut()}>
-            Sign out
-          </button>
-        </div>
+        <AccountInfo />
       </header>
 
       <main className="shell__body">

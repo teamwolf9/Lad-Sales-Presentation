@@ -12,7 +12,6 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
   onSnapshot,
   arrayUnion,
   arrayRemove,
@@ -81,9 +80,12 @@ export async function deleteProposal(id: string): Promise<void> {
 
 /** Proposals the user owns or has been invited to, newest first. */
 export async function listAccessibleProposals(uid: string): Promise<ProposalRecord[]> {
-  const q = query(col(), where('memberUids', 'array-contains', uid), orderBy('updatedAt', 'desc'))
+  // `array-contains` alone needs no composite index; sort newest-first in code.
+  const q = query(col(), where('memberUids', 'array-contains', uid))
   const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ProposalRecord, 'id'>) }))
+  return snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<ProposalRecord, 'id'>) }))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
 export async function shareProposal(id: string, targetUid: string, role: ShareRole): Promise<void> {

@@ -91,6 +91,39 @@
   overflow-y: auto;
 }
 
+/* Account info (role + email + sign out) — shared across nav & editor bars */
+.acct {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.acct__role {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+}
+.acct__role--admin {
+  background: var(--gold-500);
+  color: var(--navy-800);
+}
+.acct__role--creator {
+  background: var(--brand-primary);
+  color: #fff;
+}
+.acct__email {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Dashboard */
 .dash {
   max-width: 1120px;
@@ -383,8 +416,13 @@
   font-weight: 600;
   font-size: 16px;
 }
-.editor__ro {
+.editor__right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.editor__ro {
   font-family: var(--font-semicond);
   font-weight: 700;
   font-size: 11px;
@@ -394,6 +432,26 @@
   border: 1px solid rgba(242, 183, 5, 0.5);
   padding: 3px 10px;
   border-radius: var(--radius-pill);
+}
+.editor__save {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.savestate {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.savestate--saved {
+  color: rgba(255, 255, 255, 0.5);
+}
+.savestate--dirty {
+  color: var(--gold-300);
+}
+.savestate--saving {
+  color: var(--green-400);
 }
 .editor .app {
   height: auto;

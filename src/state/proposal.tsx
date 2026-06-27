@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Proposal } from '../types'
 import { DEFAULT_TERMS, DEFAULT_ABOUT_HEADING, DEFAULT_ABOUT_BODY } from '../data/reference'
 import { todayISO } from '../lib/util'
@@ -106,6 +106,8 @@ export function createEmptyProposal(): Proposal {
   }
 }
 
+type SaveState = 'saved' | 'dirty' | 'saving'
+
 interface ProposalCtx {
   proposal: Proposal
   setProposal: React.Dispatch<React.SetStateAction<Proposal>>
@@ -114,6 +116,10 @@ interface ProposalCtx {
   reset: () => void
   /** True when the signed-in user only has view access. */
   readOnly: boolean
+  /** Cloud save status (always 'saved' in standalone mode). */
+  saveState: SaveState
+  /** Force an immediate save (flushes the debounce). */
+  saveNow: () => void
 }
 
 const Ctx = createContext<ProposalCtx | null>(null)
@@ -167,8 +173,35 @@ export function ProposalProvider({
 }) {
   const [proposal, setProposal] = useState<Proposal>(() => (proposalId ? createEmptyProposal() : load()))
   const [loaded, setLoaded] = useState(!proposalId)
+  const [saveState, setSaveState] = useState<SaveState>('saved')
   const lastSynced = useRef<string | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const proposalRef = useRef(proposal)
+  proposalRef.current = proposal
+
+  // Persist the latest proposal to the cloud immediately.
+  const doSave = useCallback(async () => {
+    if (!proposalId) return
+    const cur = JSON.stringify(proposalRef.current)
+    if (cur === lastSynced.current) {
+      setSaveState('saved')
+      return
+    }
+    setSaveState('saving')
+    try {
+      await saveProposalData(proposalId, proposalRef.current)
+      lastSynced.current = cur
+      setSaveState('saved')
+    } catch (e) {
+      console.error('[cloud] save failed', e)
+      setSaveState('dirty')
+    }
+  }, [proposalId])
+
+  const saveNow = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    void doSave()
+  }, [doSave])
 
   // Standalone: cache to localStorage.
   useEffect(() => {
@@ -202,22 +235,24 @@ export function ProposalProvider({
     if (!proposalId || !loaded || readOnly) return
     const cur = JSON.stringify(proposal)
     if (cur === lastSynced.current) return
+    setSaveState('dirty')
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      lastSynced.current = cur
-      saveProposalData(proposalId, proposal).catch((e) => console.error('[cloud] save failed', e))
-    }, 800)
+    saveTimer.current = setTimeout(() => void doSave(), 1200)
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
     }
-  }, [proposal, proposalId, loaded, readOnly])
+  }, [proposal, proposalId, loaded, readOnly, doSave])
 
   const patch = (p: Partial<Proposal>) => setProposal((prev) => ({ ...prev, ...p }))
   const reset = () => setProposal(createEmptyProposal())
 
   if (proposalId && !loaded) return <div className="app-loading">Loading proposal…</div>
 
-  return <Ctx.Provider value={{ proposal, setProposal, patch, reset, readOnly }}>{children}</Ctx.Provider>
+  return (
+    <Ctx.Provider value={{ proposal, setProposal, patch, reset, readOnly, saveState, saveNow }}>
+      {children}
+    </Ctx.Provider>
+  )
 }
 
 export function useProposal(): ProposalCtx {
