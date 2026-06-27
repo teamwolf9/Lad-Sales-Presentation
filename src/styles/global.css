@@ -640,6 +640,9 @@ input[type='checkbox'] {
   border-style: dashed;
   opacity: 0.92;
 }
+.pline--excluded {
+  opacity: 0.6;
+}
 .pline__top {
   display: flex;
   align-items: center;

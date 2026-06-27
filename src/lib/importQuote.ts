@@ -94,6 +94,7 @@ export function parseJobQuoteXml(xml: string, fallbackTaxRate = 0): ImportedQuot
       unit: '',
       unitPrice,
       isNote,
+      excludeFromTotal: false,
     })
   }
 

@@ -272,7 +272,6 @@ export function Presentation({ proposal, activeSection }: { proposal: Proposal; 
               </div>
               <div className="about__photo">
                 <img src={B.photos.pumpInstall} alt="Lad Irrigation crew on site" />
-                <img className="about__badge" src={B.logos.employeeOwned} alt="Employee Owned" />
               </div>
             </div>
 
@@ -551,12 +550,17 @@ export function Presentation({ proposal, activeSection }: { proposal: Proposal; 
                 </thead>
                 <tbody>
                   {lines.map((l) => (
-                    <tr key={l.id} className={l.isNote ? 'pqtable__noterow' : ''}>
+                    <tr key={l.id} className={cls(l.isNote && 'pqtable__noterow', l.excludeFromTotal && 'pqtable__exclrow')}>
                       <td className="pqtable__code">{l.code}</td>
-                      <td>{l.description}</td>
+                      <td>
+                        {l.description}
+                        {l.excludeFromTotal && <span className="pqtable__excltag">comparison — not included</span>}
+                      </td>
                       <td className="num">{l.isNote ? '' : `${formatNumber(l.qty)} ${l.unit}`}</td>
                       <td className="num">{l.isNote ? '' : formatCurrency(l.unitPrice)}</td>
-                      <td className="num">{l.isNote ? '' : formatCurrency(projectLineTotal(l))}</td>
+                      <td className="num">
+                        {l.isNote ? '' : l.excludeFromTotal ? <s>{formatCurrency(projectLineTotal(l))}</s> : formatCurrency(projectLineTotal(l))}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

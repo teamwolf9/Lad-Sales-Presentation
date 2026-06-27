@@ -38,7 +38,9 @@ export function projectLineTotal(l: ProjectLine): number {
 }
 
 export function projectSubtotal(pr: Project): number {
-  return pr.lines.reduce((s, l) => s + projectLineTotal(l), 0)
+  // Lines flagged excludeFromTotal (e.g. comparison alternates) stay on the page
+  // but don't count toward the subtotal/total.
+  return pr.lines.reduce((s, l) => s + (l.excludeFromTotal ? 0 : projectLineTotal(l)), 0)
 }
 
 export function projectTax(pr: Project): number {

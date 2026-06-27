@@ -1,27 +1,46 @@
 /**
- * On-screen slide deck — a 16:9 live preview that mirrors the PowerPoint
- * export (src/lib/pptx.ts). Each .slide is 1280×720px (13.333"×7.5" @96dpi),
- * the same geometry as the exported .pptx, so what you see here is what the
- * deck looks like in PowerPoint.
+ * On-screen slide deck — a 16:9 live preview that mirrors the PowerPoint export
+ * (src/lib/pptx.ts) and the printed document (Presentation.tsx) section for
+ * section. Each .slide is 1280×720px (13.333"×7.5" @96dpi), matching the .pptx
+ * geometry, so what you see here is what the exported deck looks like.
  */
-import type { Proposal } from '../types'
+import type { Proposal, ProjectLine } from '../types'
 import { LAD_BRAND } from '../theme/brand'
 import { SERVICE_CATEGORIES, categoryLabel } from '../data/reference'
 import { LAD_STORES, LAD_HOURS } from '../data/stores'
-import { computeTotals, lineNet } from '../lib/pricing'
+import {
+  computeTotals,
+  lineGross,
+  lineNet,
+  projectLineTotal,
+  projectSubtotal,
+  projectTax,
+  projectTotal,
+  investmentTotal,
+} from '../lib/pricing'
+import { tdhAtPump, psiAtPump, hpRequired } from '../lib/hydraulics'
 import { formatCurrency, formatDate, formatNumber } from '../lib/util'
 
 const B = LAD_BRAND
+const round0 = (n: number) => Math.round(n).toLocaleString()
+const LINES_PER_SLIDE = 12
+
+function chunk<T>(arr: T[], n: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n))
+  return out
+}
 
 function Slide({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <section className={`slide ${className}`}>{children}</section>
 }
 
-function Head({ eyebrow, title }: { eyebrow: string; title: string }) {
+function Head({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
   return (
     <div className="slide__head">
       <p className="slide__eyebrow">{eyebrow}</p>
       <h2 className="slide__title">{title}</h2>
+      {sub && <div className="slide__sub">{sub}</div>}
       <span className="slide__rule" />
     </div>
   )
@@ -49,9 +68,19 @@ const initials = (name: string) =>
 export function SlideDeck({ proposal }: { proposal: Proposal }) {
   const p = proposal
   const totals = computeTotals(p)
+  const grandInvestment = investmentTotal(p)
   const activeServices = SERVICE_CATEGORIES.filter((s) => p.services.includes(s.id))
   const services = (activeServices.length ? activeServices : SERVICE_CATEGORIES.slice(0, 6)).slice(0, 6)
+
+  const showMap = p.map.enabled && !!p.map.imageUrl
+  const showServices = p.settings.showServices
+  const showAnalysis =
+    p.analysis.enabled && (p.analysis.rows.length > 0 || !!p.analysis.summary || !!p.analysis.conclusion)
   const showAbout = p.settings.showAbout && (p.aboutBody.filter(Boolean).length > 0 || p.team.length > 0)
+  const showStores = p.settings.showStores
+  const showSummary = p.settings.showSummary && p.projects.length > 0
+  const detailProjects = p.projects.filter((pr) => pr.showDetail && pr.lines.length > 0)
+  const itemPages = chunk(p.lineItems, 2)
 
   const proof = [
     { big: String(B.since), lbl: 'Family-founded. Employee-owned today.' },
@@ -91,10 +120,10 @@ export function SlideDeck({ proposal }: { proposal: Proposal }) {
               <div className="k">Valid for</div>
               <div className="v">{p.meta.validForDays} days</div>
             </div>
-            {p.lineItems.length > 0 && (
+            {(p.projects.length > 0 || p.lineItems.length > 0) && (
               <div className="slide-cover__metaitem">
                 <div className="k">Investment</div>
-                <div className="v">{formatCurrency(totals.grandTotal)}</div>
+                <div className="v">{formatCurrency(grandInvestment)}</div>
               </div>
             )}
           </div>
@@ -102,28 +131,70 @@ export function SlideDeck({ proposal }: { proposal: Proposal }) {
         </div>
       </Slide>
 
+      {/* ----------------------------- FIELD MAP ----------------------------- */}
+      {showMap && (
+        <Slide>
+          <div className="slide-map">
+            <div className="slide-map__imgwrap">
+              <img src={p.map.imageUrl} alt={p.map.caption || 'Field map'} />
+            </div>
+            <div className="slide-map__block">
+              <img className="slide-map__logo" src={B.logos.primary} alt={B.name} />
+              {([
+                ['Customer', p.customer.company || '—'],
+                ['Location', p.map.caption || p.customer.location || '—'],
+                ['Scale', p.map.scale || '—'],
+                ['Quotation / Order #', p.map.quoteNumber || p.meta.number],
+                ['Date', formatDate(p.map.date) || formatDate(p.meta.date)],
+                ['Designer', p.map.designer || '—'],
+                ['Drawn by', p.map.drawnBy || p.map.designer || '—'],
+              ] as [string, string][]).map(([k, v]) => (
+                <div className="slide-map__f" key={k}>
+                  <span className="k">{k}</span>
+                  <span className="v">{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Foot p={p} />
+        </Slide>
+      )}
+
       {/* ---------------------------- SERVICES ---------------------------- */}
-      <Slide>
-        <Head eyebrow="Turn-key solutions" title="One team, end to end." />
-        {p.coverMessage && <p className="slide-lede">{p.coverMessage}</p>}
-        <div className="slide-svc">
-          {services.map((s) => (
-            <div className="slide-svc__card" key={s.id}>
-              <h3>{s.label}</h3>
-              <p>{s.blurb}</p>
+      {showServices && (
+        <Slide>
+          <Head eyebrow="Turn-key solutions" title="One team, end to end." />
+          {p.coverMessage && <p className="slide-lede">{p.coverMessage}</p>}
+          <div className="slide-svc">
+            {services.map((s) => (
+              <div className="slide-svc__card" key={s.id}>
+                <h3>{s.label}</h3>
+                <p>{s.blurb}</p>
+              </div>
+            ))}
+          </div>
+          <div className="slide-proof">
+            {proof.map((pr, i) => (
+              <div className="slide-proof__item" key={i}>
+                <div className="big">{pr.big}</div>
+                <div className="lbl">{pr.lbl}</div>
+              </div>
+            ))}
+          </div>
+          {p.scopeNotes.filter(Boolean).length > 0 && (
+            <div className="slide-scope">
+              <p className="slide-subeyebrow" style={{ marginTop: 0 }}>Our approach</p>
+              {p.scopeNotes.filter(Boolean).map((n, i) => (
+                <div className="slide-scope__item" key={i}>
+                  <span className="n">{String(i + 1).padStart(2, '0')}</span>
+                  <span>{n}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="slide-proof">
-          {proof.map((pr, i) => (
-            <div className="slide-proof__item" key={i}>
-              <div className="big">{pr.big}</div>
-              <div className="lbl">{pr.lbl}</div>
-            </div>
-          ))}
-        </div>
-        <Foot p={p} />
-      </Slide>
+          )}
+          <Foot p={p} />
+        </Slide>
+      )}
 
       {/* ------------------------- ABOUT US & TEAM ------------------------- */}
       {showAbout && (
@@ -161,7 +232,7 @@ export function SlideDeck({ proposal }: { proposal: Proposal }) {
       )}
 
       {/* --------------------------- LOCATIONS --------------------------- */}
-      {p.settings.showStores && (
+      {showStores && (
         <Slide>
           <Head eyebrow="Always close by" title={`${LAD_STORES.length} locations, near your field.`} />
           <p className="slide-lede">
@@ -189,56 +260,239 @@ export function SlideDeck({ proposal }: { proposal: Proposal }) {
         </Slide>
       )}
 
-      {/* ------------------------- EQUIPMENT (one per item) ------------------------- */}
-      {p.lineItems.map((item, idx) => {
-        const hasImg = !!item.imageUrl
-        const specs = item.specs.filter((s) => s.label || s.value)
-        const hl = item.highlights.filter(Boolean)
-        return (
-          <Slide key={item.id}>
-            {idx === 0 && <Head eyebrow="The system" title="Equipment & services" />}
-            <div className={`slide-item ${hasImg ? '' : 'slide-item--noimg'} ${idx === 0 ? 'slide-item--withhead' : ''}`}>
-              {hasImg && (
-                <div className="slide-item__media">
-                  <img src={item.imageUrl} alt={item.name} />
-                </div>
-              )}
-              <div className="slide-item__body">
-                <div className="slide-item__cat">{categoryLabel(item.category)}</div>
-                <h3 className="slide-item__name">{item.name || 'Untitled item'}</h3>
-                {item.summary && <p className="slide-item__summary">{item.summary}</p>}
-                {item.description && <p className="slide-item__desc">{item.description}</p>}
-                {specs.length > 0 && (
-                  <div className="slide-item__specs">
-                    {specs.map((s) => (
-                      <div className="slide-item__spec" key={s.id}>
-                        <span className="k">{s.label}</span>
-                        <span className="v">{s.value}</span>
-                      </div>
+      {/* ---------------------- IMPROVEMENTS ANALYSIS ---------------------- */}
+      {showAnalysis && (
+        <Slide>
+          <Head
+            eyebrow="Why upgrade"
+            title={p.analysis.heading || 'Improvements Analysis'}
+            sub={[p.analysis.subhead, p.analysis.forLine, p.analysis.byLine].filter(Boolean).join('  ·  ') || undefined}
+          />
+          {p.analysis.summary && (
+            <p className="slide-ana__note">
+              <strong>Summary — </strong>
+              {p.analysis.summary}
+            </p>
+          )}
+          <div className="slide-ana__tables">
+            {([
+              { label: p.analysis.existingLabel || 'Existing', atKey: 'exAt', chKey: 'exChange', isNew: false },
+              { label: p.analysis.newLabel || 'New', atKey: 'newAt', chKey: 'newChange', isNew: true },
+            ] as const).map((col) => (
+              <div className={`slide-ana__col ${col.isNew ? 'slide-ana__col--new' : ''}`} key={col.label}>
+                <div className="slide-ana__coltitle">{col.label}</div>
+                <div className="slide-ana__unit">{p.analysis.unitLabel}</div>
+                <table className="slide-ana__table">
+                  <thead>
+                    <tr>
+                      <th>Feature</th>
+                      <th className="num">At point</th>
+                      <th className="num">Change</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {p.analysis.rows.map((r) => (
+                      <tr key={r.id}>
+                        <td>{r.feature}</td>
+                        <td className="num">{r[col.atKey]}</td>
+                        <td className="num">{r[col.chKey]}</td>
+                      </tr>
                     ))}
-                  </div>
-                )}
-                {hl.length > 0 && (
-                  <ul className="slide-item__hl">
-                    {hl.map((h, i) => (
-                      <li key={i}>{h}</li>
-                    ))}
-                  </ul>
-                )}
-                <div className="slide-item__price">
-                  <span className="qty">
-                    {formatNumber(item.quantity)} {item.unit} × {formatCurrency(item.unitPrice)}
-                  </span>
-                  <span className="amt">{formatCurrency(lineNet(item))}</span>
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+          {p.hydraulics.worksheet.designGpm > 0 && (
+            <div className="slide-ana__basis">
+              {[
+                ['Design GPM', formatNumber(p.hydraulics.worksheet.designGpm)],
+                ['Total dynamic head', `${round0(tdhAtPump(p.hydraulics.worksheet))} ft`],
+                ['Pressure @ pump', `${round0(psiAtPump(p.hydraulics.worksheet))} psi`],
+                ['HP required', `${round0(hpRequired(p.hydraulics.worksheet))} hp`],
+              ].map(([k, v]) => (
+                <div className="slide-ana__basis-item" key={k}>
+                  <div className="k">{k}</div>
+                  <div className="v">{v}</div>
                 </div>
+              ))}
+            </div>
+          )}
+          {p.analysis.conclusion && (
+            <p className="slide-ana__note">
+              <strong>Conclusion — </strong>
+              {p.analysis.conclusion}
+            </p>
+          )}
+          <Foot p={p} />
+        </Slide>
+      )}
+
+      {/* -------------------------- INVESTMENT SUMMARY -------------------------- */}
+      {showSummary && (
+        <Slide>
+          <Head
+            eyebrow="Investment summary"
+            title={p.customer.company || 'Your Operation'}
+            sub={[p.customer.location, p.settings.summarySubtitle].filter(Boolean).join('  ·  ') || undefined}
+          />
+          <table className="slide-sumtable">
+            <tbody>
+              {p.projects.map((pr) => (
+                <tr key={pr.id}>
+                  <td className="name">
+                    {pr.title || 'Untitled project'}
+                    {pr.location && <span className="loc">{pr.location}</span>}
+                  </td>
+                  <td className="no">{pr.number}</td>
+                  <td className="num amt">{formatCurrency(projectTotal(pr))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="slide-sumtotal">
+            <span>Total <em>(includes est. tax)</em></span>
+            <span>{formatCurrency(grandInvestment)}</span>
+          </div>
+          {p.payment.enabled && (
+            <div className="slide-pay">
+              <p className="slide-subeyebrow" style={{ marginTop: 0 }}>Payment schedule</p>
+              {([
+                ['Down payment due upon approval', p.payment.downPayment],
+                ['Progress payments', p.payment.progressPayments],
+                ['Estimated due upon invoicing', p.payment.dueUponInvoicing],
+              ] as [string, number][]).map(([k, v]) => (
+                <div className="slide-pay__row" key={k}>
+                  <span>{k}</span>
+                  <span>{formatCurrency(v)}</span>
+                </div>
+              ))}
+              <div className="slide-pay__row slide-pay__row--total">
+                <span>Total</span>
+                <span>{formatCurrency(p.payment.downPayment + p.payment.progressPayments + p.payment.dueUponInvoicing)}</span>
               </div>
             </div>
+          )}
+          <Foot p={p} />
+        </Slide>
+      )}
+
+      {/* ------------------------- PROJECT DETAIL QUOTES ------------------------- */}
+      {detailProjects.map((pr) => {
+        const pages = chunk(pr.lines, LINES_PER_SLIDE)
+        return pages.map((lines: ProjectLine[], pi) => (
+          <Slide key={`${pr.id}-${pi}`}>
+            <Head
+              eyebrow={`Project Quote${pr.number ? ` · ${pr.number}` : ''}`}
+              title={`${pr.title || 'Project'}${pages.length > 1 ? ` (cont. ${pi + 1}/${pages.length})` : ''}`}
+              sub={pr.location || undefined}
+            />
+            {pi === 0 && pr.description && <p className="slide-lede">{pr.description}</p>}
+            <table className="slide-pqtable">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Description</th>
+                  <th className="num">Qty</th>
+                  <th className="num">Unit price</th>
+                  <th className="num">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lines.map((l) => (
+                  <tr key={l.id} className={`${l.isNote ? 'noterow' : ''} ${l.excludeFromTotal ? 'exclrow' : ''}`}>
+                    <td className="code">{l.code}</td>
+                    <td>
+                      {l.description}
+                      {l.excludeFromTotal && <span className="excltag">comparison — not included</span>}
+                    </td>
+                    <td className="num">{l.isNote ? '' : `${formatNumber(l.qty)} ${l.unit}`}</td>
+                    <td className="num">{l.isNote ? '' : formatCurrency(l.unitPrice)}</td>
+                    <td className="num">
+                      {l.isNote ? '' : l.excludeFromTotal ? <s>{formatCurrency(projectLineTotal(l))}</s> : formatCurrency(projectLineTotal(l))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {pi === pages.length - 1 && (
+              <div className="slide-totals">
+                <div className="row">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(projectSubtotal(pr))}</span>
+                </div>
+                <div className="row">
+                  <span>Sales tax ({pr.taxRate || 0}%)</span>
+                  <span>{formatCurrency(projectTax(pr))}</span>
+                </div>
+                <div className="row grand">
+                  <span>Project total</span>
+                  <span>{formatCurrency(projectTotal(pr))}</span>
+                </div>
+              </div>
+            )}
             <Foot p={p} />
           </Slide>
-        )
+        ))
       })}
 
-      {/* ----------------------------- PRICING ----------------------------- */}
+      {/* ------------------------- EQUIPMENT (legacy items) ------------------------- */}
+      {itemPages.map((group, gi) => (
+        <Slide key={`items-${gi}`}>
+          {gi === 0 && <Head eyebrow="The system" title="Equipment & services" />}
+          {group.map((item) => {
+            const hasImg = !!item.imageUrl
+            const specs = item.specs.filter((s) => s.label || s.value)
+            const hl = item.highlights.filter(Boolean)
+            const discounted = item.discountPct > 0
+            return (
+              <div className={`slide-item ${hasImg ? '' : 'slide-item--noimg'}`} key={item.id}>
+                {hasImg && (
+                  <div className="slide-item__media">
+                    <img src={item.imageUrl} alt={item.name} />
+                  </div>
+                )}
+                <div className="slide-item__body">
+                  <div className="slide-item__cat">{categoryLabel(item.category)}</div>
+                  <h3 className="slide-item__name">{item.name || 'Untitled item'}</h3>
+                  {item.summary && <p className="slide-item__summary">{item.summary}</p>}
+                  {item.description && <p className="slide-item__desc">{item.description}</p>}
+                  {specs.length > 0 && (
+                    <div className="slide-item__specs">
+                      {specs.map((s) => (
+                        <div className="slide-item__spec" key={s.id}>
+                          <span className="k">{s.label}</span>
+                          <span className="v">{s.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {hl.length > 0 && (
+                    <ul className="slide-item__hl">
+                      {hl.map((h, i) => (
+                        <li key={i}>{h}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="slide-item__price">
+                    <span className="qty">
+                      {formatNumber(item.quantity)} {item.unit} × {formatCurrency(item.unitPrice)}
+                      {discounted && ` · −${item.discountPct}%`}
+                    </span>
+                    <span className="amt">
+                      {discounted && <s>{formatCurrency(lineGross(item))}</s>}
+                      {formatCurrency(lineNet(item))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+          <Foot p={p} />
+        </Slide>
+      ))}
+
+      {/* ----------------------------- PRICING (legacy) ----------------------------- */}
       {p.settings.showPricing && p.lineItems.length > 0 && (
         <Slide>
           <Head eyebrow="Investment" title="Pricing summary" />
@@ -288,9 +542,6 @@ export function SlideDeck({ proposal }: { proposal: Proposal }) {
             <div className="row grand">
               <span>Total investment</span>
               <span>{formatCurrency(totals.grandTotal)}</span>
-            </div>
-            <div className="valid">
-              Valid {p.meta.validForDays} days from {formatDate(p.meta.date)}.
             </div>
           </div>
           <Foot p={p} />

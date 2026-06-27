@@ -47,6 +47,9 @@ export interface ProjectLine {
   unitPrice: number
   /** A $0 note/spec sub-line (shown indented, no price emphasis). */
   isNote: boolean
+  /** Keep the line on the page but leave it OUT of the subtotal/total
+   *  (e.g. an "HDPE for comparison" alternate the customer won't also buy). */
+  excludeFromTotal?: boolean
 }
 
 /**

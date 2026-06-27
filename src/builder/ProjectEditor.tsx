@@ -82,7 +82,7 @@ export function ProjectEditor({
       {/* Line items */}
       <div className="mini-label">Line items</div>
       {project.lines.map((l) => (
-        <div className={cls('pline', l.isNote && 'pline--note')} key={l.id}>
+        <div className={cls('pline', l.isNote && 'pline--note', l.excludeFromTotal && 'pline--excluded')} key={l.id}>
           <div className="pline__top">
             <input
               className="pline__code"
@@ -94,6 +94,16 @@ export function ProjectEditor({
               <input type="checkbox" checked={l.isNote} onChange={(e) => setLine(l.id, { isNote: e.target.checked })} />
               note
             </label>
+            {!l.isNote && (
+              <label className="pline__notetoggle" title="Keep on the page but exclude from the subtotal/total (e.g. a comparison alternate)">
+                <input
+                  type="checkbox"
+                  checked={!!l.excludeFromTotal}
+                  onChange={(e) => setLine(l.id, { excludeFromTotal: e.target.checked })}
+                />
+                exclude
+              </label>
+            )}
             <button className="icon-btn" onClick={() => removeLine(l.id)} title="Remove line">
               <Icon name="trash" size={13} />
             </button>
@@ -126,7 +136,9 @@ export function ProjectEditor({
                 value={l.unitPrice}
                 onChange={(e) => setLine(l.id, { unitPrice: parseFloat(e.target.value) || 0 })}
               />
-              <span className="pline__total">{formatCurrency(projectLineTotal(l))}</span>
+              <span className="pline__total" title={l.excludeFromTotal ? 'Excluded from total' : undefined}>
+                {l.excludeFromTotal ? <s>{formatCurrency(projectLineTotal(l))}</s> : formatCurrency(projectLineTotal(l))}
+              </span>
             </div>
           )}
         </div>
