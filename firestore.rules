@@ -23,6 +23,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/invites/$(tokenEmail())).data.role;
     }
 
+    // ---- Outgoing mail queue (Trigger Email extension) ----
+    // Admins enqueue invite emails. The extension processes docs via the Admin
+    // SDK, which bypasses these rules, so clients only ever create.
+    match /mail/{id} {
+      allow create: if isAdmin();
+      allow read, update, delete: if false;
+    }
+
     // ---- Invites (admin-managed allowlist) ----
     match /invites/{email} {
       // Admins see all; a user may read only their own invite (for sign-in).

@@ -455,6 +455,11 @@
   color: var(--red-600, #c0492f);
   font-size: 13px;
 }
+.invite-sent {
+  margin-top: 8px;
+  color: var(--green-700);
+  font-size: 13px;
+}
 .invite-list {
   margin-top: 16px;
   border-top: 1px solid var(--border-subtle);

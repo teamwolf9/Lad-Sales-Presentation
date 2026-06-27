@@ -17,7 +17,25 @@ export function SignIn() {
     try {
       await fn()
     } catch (e) {
-      setErr(e instanceof Error ? e.message.replace('Firebase: ', '') : 'Sign-in failed')
+      const code = (e as { code?: string })?.code ?? ''
+      // Friendly, actionable messages — and nudge first-timers to Create account.
+      if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
+        setErr(
+          mode === 'in'
+            ? 'No account found for that email yet. If this is your first time, switch to “Create account” to set a password.'
+            : 'That didn’t work — check the email and password.',
+        )
+        if (mode === 'in') setMode('up')
+      } else if (code === 'auth/email-already-in-use') {
+        setErr('An account already exists for that email — switch to “Sign in.”')
+        setMode('in')
+      } else if (code === 'auth/weak-password') {
+        setErr('Password must be at least 6 characters.')
+      } else if (code === 'auth/invalid-email') {
+        setErr('That doesn’t look like a valid email address.')
+      } else {
+        setErr(e instanceof Error ? e.message.replace('Firebase: ', '') : 'Sign-in failed')
+      }
     } finally {
       setBusy(false)
     }
@@ -43,8 +61,28 @@ export function SignIn() {
         </button>
 
         <div className="signin__or">
-          <span>or</span>
+          <span>or use your email</span>
         </div>
+
+        <div className="signin__seg">
+          <button
+            type="button"
+            className={`signin__segbtn ${mode === 'in' ? 'is-on' : ''}`}
+            onClick={() => { setMode('in'); setErr('') }}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            className={`signin__segbtn ${mode === 'up' ? 'is-on' : ''}`}
+            onClick={() => { setMode('up'); setErr('') }}
+          >
+            Create account
+          </button>
+        </div>
+        {mode === 'up' && (
+          <p className="signin__hint">First time? Create an account with the email you were invited at.</p>
+        )}
 
         <form
           onSubmit={(e) => {
@@ -59,10 +97,6 @@ export function SignIn() {
             {busy ? 'Working…' : mode === 'in' ? 'Sign in' : 'Create account'}
           </button>
         </form>
-
-        <button className="signin__toggle" onClick={() => setMode((m) => (m === 'in' ? 'up' : 'in'))}>
-          {mode === 'in' ? 'Need an account? Create one' : 'Have an account? Sign in'}
-        </button>
       </div>
     </div>
   )

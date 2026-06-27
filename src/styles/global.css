@@ -938,6 +938,39 @@ input[type='checkbox'] {
 .signin__toggle:hover {
   text-decoration: underline;
 }
+.signin__seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--n-100, #eceff2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  margin-bottom: 12px;
+}
+.signin__segbtn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.signin__segbtn.is-on {
+  background: var(--green-500);
+  color: #0e161d;
+}
+.signin__hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-align: left;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
 
 @media (max-width: 1024px) {
   .app {

@@ -20,6 +20,7 @@ export function AdminUsers() {
   const [role, setRole] = useState<OrgRole>('creator')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [sent, setSent] = useState('')
 
   const refresh = useCallback(() => {
     setLoading(true)
@@ -49,9 +50,11 @@ export function AdminUsers() {
     if (!clean) return
     setBusy(true)
     setErr('')
+    setSent('')
     try {
       await createInvite(clean, role, profile?.email || user?.email || 'admin')
       setEmail('')
+      setSent(`Invited ${clean} — an email is on its way.`)
       refresh()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not create invite')
@@ -108,6 +111,7 @@ export function AdminUsers() {
           </button>
         </form>
         {err && <div className="invite-err">{err}</div>}
+        {sent && <div className="invite-sent">{sent}</div>}
 
         {invites.length > 0 && (
           <div className="invite-list">

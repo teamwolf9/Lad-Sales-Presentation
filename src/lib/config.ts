@@ -7,6 +7,9 @@
  */
 export const ADMIN_EMAILS = ['teamwolf9@gmail.com']
 
+/** Public site URL — used in invite emails so recipients have a link to sign in. */
+export const SITE_URL = 'https://proposal-builder-3f23c.web.app'
+
 export function isAdminEmail(email: string | null | undefined): boolean {
   return !!email && ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(email.toLowerCase())
 }
