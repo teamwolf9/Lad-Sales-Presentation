@@ -346,6 +346,15 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+.invite-form input[type='email'],
+.invite-form select {
+  color: var(--text-strong);
+  background: #fff;
+  border: 1px solid var(--border);
+}
+.invite-form input[type='email']::placeholder {
+  color: var(--text-muted);
+}
 .invite-form input[type='email'] {
   flex: 1;
   min-width: 220px;
