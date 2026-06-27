@@ -14,7 +14,7 @@ import {
   investmentTotal,
 } from '../lib/pricing'
 import { tdhAtPump, psiAtPump, hpRequired } from '../lib/hydraulics'
-import { formatCurrency, formatDate, formatNumber } from '../lib/util'
+import { formatCurrency, formatDate, formatNumber, cls } from '../lib/util'
 
 const B = LAD_BRAND
 const round0 = (n: number) => Math.round(n).toLocaleString()
@@ -55,8 +55,13 @@ function Foot({ p, page, total }: { p: Proposal; page: number; total: number }) 
   )
 }
 
-export function Presentation({ proposal }: { proposal: Proposal }) {
+export function Presentation({ proposal, activeSection }: { proposal: Proposal; activeSection?: string }) {
   const p = proposal
+  /** className + anchor for a top-level sheet, flagging the one the builder step targets. */
+  const sec = (key: string, base = 'sheet') => ({
+    className: cls(base, activeSection === key && 'sheet--active'),
+    'data-doc-section': key,
+  })
   const totals = computeTotals(p)
   const activeServices = SERVICE_CATEGORIES.filter((s) => p.services.includes(s.id))
   const itemPages = chunk(p.lineItems, 2)
@@ -106,7 +111,7 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
   return (
     <>
       {/* ----------------------------- COVER ----------------------------- */}
-      <section className="sheet cover">
+      <section {...sec('cover', 'sheet cover')}>
         <img className="cover__photo" src={B.photos.pivotSunset} alt="" />
         <div className="cover__scrim" />
         <div className="cover__inner">
@@ -151,7 +156,7 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
 
       {/* ----------------------------- FIELD MAP ----------------------------- */}
       {showMap && (
-        <section className="sheet mapsheet">
+        <section {...sec('map', 'sheet mapsheet')}>
           <div className="mapsheet__imgwrap">
             <img className="mapsheet__img" src={p.map.imageUrl} alt={p.map.caption || 'Field map'} />
           </div>
@@ -194,7 +199,7 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
 
       {/* --------------------------- SERVICES + PROOF + SCOPE --------------------------- */}
       {showServices && (
-      <section className="sheet page-subtle">
+      <section {...sec('services', 'sheet page-subtle')}>
         <div className="sheet__inner">
           <p className="eyebrow">Turn-key solutions</p>
           <h2 className="sec-head">One team, end to end.</h2>
@@ -253,7 +258,7 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
 
       {/* --------------------------- ABOUT US & TEAM --------------------------- */}
       {showAbout && (
-        <section className="sheet page-subtle">
+        <section {...sec('team', 'sheet page-subtle')}>
           <div className="sheet__inner">
             <p className="eyebrow">Who we are</p>
             <h2 className="sec-head">{p.aboutHeading || 'About Lad Irrigation'}</h2>
@@ -301,7 +306,7 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
 
       {/* --------------------------- STORE NETWORK --------------------------- */}
       {showStores && (
-        <section className="sheet page-subtle">
+        <section {...sec('stores', 'sheet page-subtle')}>
           <div className="sheet__inner">
             <p className="eyebrow">Always close by</p>
             <h2 className="sec-head">{LAD_STORES.length} locations, near your field.</h2>
@@ -348,7 +353,7 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
 
       {/* --------------------------- IMPROVEMENTS ANALYSIS --------------------------- */}
       {showAnalysis && (
-        <section className="sheet page-subtle">
+        <section {...sec('analysis', 'sheet page-subtle')}>
           <div className="sheet__inner">
             <p className="eyebrow">Why upgrade</p>
             <h2 className="sec-head">{p.analysis.heading || 'Improvements Analysis'}</h2>
@@ -431,7 +436,7 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
 
       {/* --------------------------- INVESTMENT SUMMARY --------------------------- */}
       {showSummary && (
-        <section className="sheet">
+        <section {...sec('summary')}>
           <div className="sheet__inner">
             <div className="sum__head">
               <div>
@@ -504,7 +509,7 @@ export function Presentation({ proposal }: { proposal: Proposal }) {
       {/* --------------------------- PROJECT DETAIL QUOTES --------------------------- */}
       {projectPageGroups.map(({ pr, pages }) =>
         pages.map((lines, pi) => (
-          <section className="sheet" key={`${pr.id}-${pi}`}>
+          <section className={cls('sheet', activeSection === 'projects' && 'sheet--active')} data-doc-section="projects" key={`${pr.id}-${pi}`}>
             <div className="sheet__inner">
               <div className="pq__head">
                 <div>

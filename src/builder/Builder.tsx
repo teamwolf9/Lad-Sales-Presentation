@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useProposal } from '../state/proposal'
 import { LAD_BRAND } from '../theme/brand'
 import { SERVICE_CATEGORIES } from '../data/reference'
@@ -7,6 +7,7 @@ import type { Project } from '../types'
 import { Icon } from '../ui/Icon'
 import { uid, formatCurrency, cls } from '../lib/util'
 import { uploadImageFile } from '../lib/uploads'
+import { parseJobQuoteXml } from '../lib/importQuote'
 import { useAuth } from '../lib/auth'
 import { investmentTotal } from '../lib/pricing'
 import { segLossPsi } from '../lib/hydraulics'
@@ -18,12 +19,20 @@ import { CalculatorToolkit } from './CalculatorToolkit'
 
 const STEPS = ['Setup', 'Customer', 'Services', 'Team', 'Map', 'Design', 'Projects', 'Analysis', 'Summary'] as const
 
-export function Builder() {
+/** Which document section each step is editing — drives the live-preview scroll/highlight. */
+const STEP_SECTIONS: string[] = ['cover', 'cover', 'services', 'team', 'map', 'projects', 'projects', 'analysis', 'summary']
+
+export function Builder({ onSection }: { onSection?: (key: string) => void }) {
   const { proposal, setProposal, reset } = useProposal()
   const { user } = useAuth()
   const [step, setStep] = useState(0)
   const mapFileRef = useRef<HTMLInputElement>(null)
   const p = proposal
+
+  // Tell the preview which section this step corresponds to, so it scrolls/highlights it.
+  useEffect(() => {
+    onSection?.(STEP_SECTIONS[step] ?? 'cover')
+  }, [step, onSection])
 
   // ---- field helpers bound to nested proposal objects ----
   const meta = (patch: Partial<typeof p.meta>) => setProposal({ ...p, meta: { ...p.meta, ...patch } })
@@ -63,6 +72,45 @@ export function Builder() {
   const updateProject = (id: string, next: Project) =>
     setProposal({ ...p, projects: p.projects.map((pr) => (pr.id === id ? next : pr)) })
   const removeProject = (id: string) => setProposal({ ...p, projects: p.projects.filter((pr) => pr.id !== id) })
+
+  // ---- import a Business Central job-quote XML as a project ----
+  const quoteFileRef = useRef<HTMLInputElement>(null)
+  const [notice, setNotice] = useState<{ kind: 'ok' | 'err'; lines: string[] } | null>(null)
+  // Auto-dismiss the import banner after a few seconds.
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), 6000)
+    return () => clearTimeout(t)
+  }, [notice])
+
+  const importQuoteFile = async (file: File) => {
+    try {
+      const text = await file.text()
+      const { project, customer, notes } = parseJobQuoteXml(text, p.settings.taxRate)
+      setProposal((prev) => ({
+        ...prev,
+        projects: [...prev.projects, project],
+        // Pre-fill empty customer fields from the quote's bill-to details.
+        customer: {
+          ...prev.customer,
+          company: prev.customer.company || customer.company,
+          location: prev.customer.location || customer.location,
+          contactName: prev.customer.contactName || customer.contactName,
+        },
+        settings: { ...prev.settings, showSummary: true },
+      }))
+      setNotice({ kind: 'ok', lines: [`Imported “${project.title}”`, ...notes] })
+      setStep(6) // jump to Projects so the new project is visible
+    } catch (err) {
+      console.error('Quote import failed', err)
+      setNotice({ kind: 'err', lines: [`Couldn't import that file.`, err instanceof Error ? err.message : 'Unknown error.'] })
+    }
+  }
+  const onQuotePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) void importQuoteFile(file)
+    e.target.value = '' // allow re-importing the same filename
+  }
 
   // ---- analysis rows ----
   const addRow = () =>
@@ -163,11 +211,43 @@ export function Builder() {
       </nav>
 
       <div className="builder__body">
+        {/* Shared hidden picker for Business Central quote import (used from Setup & Projects). */}
+        <input ref={quoteFileRef} type="file" accept=".xml,text/xml,application/xml" onChange={onQuotePick} style={{ display: 'none' }} />
+
+        {notice && (
+          <div className={cls('import-notice', notice.kind === 'err' && 'import-notice--err')} role="status">
+            <Icon name={notice.kind === 'ok' ? 'check' : 'trash'} size={15} />
+            <div className="import-notice__body">
+              {notice.lines.map((l, i) => (
+                <div key={i} className={i === 0 ? 'import-notice__title' : undefined}>{l}</div>
+              ))}
+            </div>
+            <button className="icon-btn" onClick={() => setNotice(null)} title="Dismiss">
+              <Icon name="plus" size={14} className="import-notice__close" />
+            </button>
+          </div>
+        )}
+
         {/* ---------------------------- STEP 0 · SETUP ---------------------------- */}
         {step === 0 && (
           <div>
             <h2 className="section-title">Proposal setup</h2>
             <p className="section-hint">The basics that appear on the cover and footer.</p>
+
+            <div className="import-card">
+              <div className="import-card__head">
+                <Icon name="box" size={16} />
+                <span>Start from a Business Central quote</span>
+              </div>
+              <p className="import-card__hint">
+                Import a WSI Job Quote (.xml) to load its products &amp; services as a project — bill-to, line items, and
+                tax come in automatically. You can keep adding items afterward.
+              </p>
+              <button className="btn btn--primary btn--sm" onClick={() => quoteFileRef.current?.click()}>
+                <Icon name="plus" size={14} /> Import quote (.xml)
+              </button>
+            </div>
+
             <Text label="Proposal title" value={p.meta.title} onChange={(v) => meta({ title: v })} />
             <div className="field-row">
               <Text label="Proposal #" value={p.meta.number} onChange={(v) => meta({ number: v })} />
@@ -428,9 +508,14 @@ export function Builder() {
                 />
               ))
             )}
-            <button className="btn btn--primary btn--block" style={{ marginTop: 8 }} onClick={addProject}>
-              <Icon name="plus" size={15} /> Add project
-            </button>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button className="btn btn--primary btn--block" onClick={addProject}>
+                <Icon name="plus" size={15} /> Add project
+              </button>
+              <button className="btn btn--ghost btn--block" onClick={() => quoteFileRef.current?.click()}>
+                <Icon name="box" size={15} /> Import quote (.xml)
+              </button>
+            </div>
           </div>
         )}
 

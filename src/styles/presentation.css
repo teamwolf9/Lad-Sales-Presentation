@@ -14,6 +14,20 @@
   box-shadow: var(--shadow-lg);
   font-family: var(--font-sans);
   --pad: 60px;
+  transition: box-shadow 0.25s ease, outline-color 0.25s ease;
+}
+
+/* The sheet that corresponds to the builder step you're editing. */
+.sheet--active {
+  outline: 4px solid var(--green-500);
+  outline-offset: 6px;
+  box-shadow: 0 0 0 6px rgba(121, 192, 67, 0.18), var(--shadow-lg);
+}
+@media print {
+  .sheet--active {
+    outline: none !important;
+    box-shadow: none !important;
+  }
 }
 .sheet__inner {
   position: relative;

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Builder } from '../builder/Builder'
 import { Presentation } from '../presentation/Presentation'
 import { SlideDeck } from '../presentation/SlideDeck'
@@ -8,11 +8,24 @@ import { cls } from '../lib/util'
 
 type View = 'document' | 'slides'
 
-function Preview() {
+function Preview({ activeSection }: { activeSection: string }) {
   const { proposal } = useProposal()
   const [view, setView] = useState<View>('document')
   const [zoom, setZoom] = useState(0.62)
   const [exporting, setExporting] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Scroll the live document to the section the current builder step is editing.
+  useEffect(() => {
+    if (view !== 'document') return
+    const container = scrollRef.current
+    const target = container?.querySelector<HTMLElement>(`[data-doc-section="${activeSection}"]`)
+    if (!container || !target) return
+    const top = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 24
+    container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+    // Intentionally not keyed on proposal edits — only jump when the step/view changes,
+    // so typing doesn't yank the preview back to the top of the section.
+  }, [activeSection, view, zoom])
 
   const handlePptx = async () => {
     setExporting(true)
@@ -32,7 +45,7 @@ function Preview() {
       <div className="preview__bar no-print">
         <div className="preview__title">
           <span className="preview__tag">Live preview</span>
-          <span>{proposal.customer.company || 'Untitled proposal'}</span>
+          <span>{proposal.meta.title || 'Untitled proposal'}</span>
         </div>
 
         <div className="viewtoggle" role="tablist" aria-label="Preview format">
@@ -81,9 +94,9 @@ function Preview() {
         </div>
       </div>
 
-      <div className="preview__scroll">
+      <div className="preview__scroll" ref={scrollRef}>
         <div className={cls('zoomwrap', view === 'slides' && 'is-hidden-screen')} style={{ transform: `scale(${zoom})` }}>
-          <Presentation proposal={proposal} />
+          <Presentation proposal={proposal} activeSection={activeSection} />
         </div>
         {view === 'slides' && (
           <div className="zoomwrap no-print" style={{ transform: `scale(${zoom})` }}>
@@ -98,10 +111,11 @@ function Preview() {
 /** The two-pane editor. Viewers (readOnly) see the preview only. */
 export function ProposalWorkspace() {
   const { readOnly } = useProposal()
+  const [activeSection, setActiveSection] = useState('cover')
   return (
     <div className={cls('app', readOnly && 'app--solo')}>
-      {!readOnly && <Builder />}
-      <Preview />
+      {!readOnly && <Builder onSection={setActiveSection} />}
+      <Preview activeSection={activeSection} />
     </div>
   )
 }

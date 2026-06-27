@@ -458,6 +458,74 @@ select option {
   place-items: center;
 }
 
+/* Import result banner (auto-dismiss) */
+.import-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(121, 192, 67, 0.4);
+  background: rgba(121, 192, 67, 0.12);
+  color: #eaf1f5;
+  animation: import-notice-in 0.2s ease;
+}
+.import-notice--err {
+  border-color: rgba(242, 90, 90, 0.45);
+  background: rgba(242, 90, 90, 0.12);
+}
+.import-notice > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--green-400);
+}
+.import-notice--err > svg {
+  color: #f08a8a;
+}
+.import-notice__body {
+  flex: 1;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(234, 241, 245, 0.8);
+}
+.import-notice__title {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #fff;
+  margin-bottom: 2px;
+}
+.import-notice__close {
+  transform: rotate(45deg);
+}
+@keyframes import-notice-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Import-from-quote card (Setup step) */
+.import-card {
+  border: 1px solid rgba(121, 192, 67, 0.35);
+  background: rgba(121, 192, 67, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.import-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green-400);
+  font-weight: 700;
+  font-size: 14px;
+}
+.import-card__hint {
+  margin: 8px 0 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(234, 241, 245, 0.7);
+}
+
 .help-empty {
   text-align: center;
   padding: 22px;
