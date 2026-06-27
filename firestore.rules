@@ -9,6 +9,8 @@ service cloud.firestore {
     }
     function isAdmin() { return signedIn() && myRole() == 'admin'; }
     function isCreator() { return signedIn() && (myRole() == 'admin' || myRole() == 'creator'); }
+    // Admins + executives get a read-only org-wide view of every proposal.
+    function isExecutive() { return signedIn() && (myRole() == 'admin' || myRole() == 'executive'); }
     // Bootstrap admin — keep in sync with src/lib/config.ts ADMIN_EMAILS.
     function isBootstrapAdmin() {
       return signedIn() && request.auth.token.email == 'teamwolf9@gmail.com';
@@ -56,18 +58,34 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---- Share requests (non-admin shares awaiting approval) ----
+    match /shareRequests/{reqId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.requestedByUid == request.auth.uid);
+      // A member of the proposal may raise a request for themselves.
+      allow create: if signedIn()
+        && request.resource.data.requestedByUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.auth.uid in get(/databases/$(database)/documents/proposals/$(request.resource.data.proposalId)).data.memberUids;
+      // Admins approve/deny; a requester may cancel their own.
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.requestedByUid == request.auth.uid);
+      allow update: if isAdmin();
+    }
+
     // ---- Proposals ----
     match /proposals/{id} {
-      allow read: if signedIn() && request.auth.uid in resource.data.memberUids;
+      allow read: if signedIn() && (isExecutive() || request.auth.uid in resource.data.memberUids);
       // Only admins/creators may create, and the new doc must be owned by them
       // with membership limited to themselves.
       allow create: if isCreator()
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.memberUids.hasOnly([request.auth.uid]);
-      // Owner: full control. Editor: may change content but not ownership or
-      // the sharing membership.
+      // Owner: full control. Admin: may apply approved shares. Editor: may
+      // change content but not ownership or the sharing membership.
       allow update: if signedIn() && (
           resource.data.ownerUid == request.auth.uid
+          || isAdmin()
           || (resource.data.roles[request.auth.uid] == 'editor'
               && request.resource.data.ownerUid == resource.data.ownerUid
               && request.resource.data.roles == resource.data.roles

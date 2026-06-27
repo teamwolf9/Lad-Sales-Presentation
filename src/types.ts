@@ -234,8 +234,14 @@ export interface ProposalSettings {
 
 /* ----------------------------- Multi-user ----------------------------- */
 
-/** Organisation-wide role controlling what a user can do across the app. */
-export type OrgRole = 'admin' | 'creator' | 'viewer'
+/**
+ * Organisation-wide role controlling what a user can do across the app.
+ * - admin: full control, manage users, approve shares.
+ * - executive: read-only org-wide overview of every proposal.
+ * - creator: make & share proposals (shares need admin approval).
+ * - viewer: only proposals shared with them.
+ */
+export type OrgRole = 'admin' | 'executive' | 'creator' | 'viewer'
 
 /** A user in the directory (users/{uid}). */
 export interface UserProfile {
@@ -260,6 +266,23 @@ export interface Invite {
 
 /** Per-proposal access granted to an invited user. */
 export type ShareRole = 'editor' | 'viewer'
+
+/**
+ * A pending request (shareRequests/{id}) to share a proposal with someone,
+ * raised by a non-admin. An admin approves it before access is granted.
+ */
+export interface ShareRequest {
+  id: string
+  proposalId: string
+  proposalTitle: string
+  targetUid: string
+  targetEmail: string
+  role: ShareRole
+  requestedByUid: string
+  requestedByEmail: string
+  status: 'pending'
+  createdAt: number
+}
 
 /**
  * A stored proposal (proposals/{id}). Holds metadata, the membership map, and

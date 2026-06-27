@@ -88,6 +88,14 @@ export async function listAccessibleProposals(uid: string): Promise<ProposalReco
     .sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
+/** Every proposal in the org (admin / executive overview), newest first. */
+export async function listAllProposals(): Promise<ProposalRecord[]> {
+  const snap = await getDocs(col())
+  return snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Omit<ProposalRecord, 'id'>) }))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+}
+
 export async function shareProposal(id: string, targetUid: string, role: ShareRole): Promise<void> {
   await updateDoc(ref(id), {
     [`roles.${targetUid}`]: role,

@@ -1,16 +1,18 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../lib/auth'
-import type { Invite, OrgRole, UserProfile } from '../types'
+import type { Invite, OrgRole, ShareRequest, UserProfile } from '../types'
 import { listUsers, setUserRole, setUserDisabled } from '../lib/users'
 import { listInvites, createInvite, deleteInvite } from '../lib/invites'
+import { listPendingRequests, approveShareRequest, denyShareRequest } from '../lib/shareRequests'
 import { Icon } from '../ui/Icon'
 
-const ROLES: OrgRole[] = ['admin', 'creator', 'viewer']
+const ROLES: OrgRole[] = ['admin', 'executive', 'creator', 'viewer']
 
 export function AdminUsers() {
   const { user, profile } = useAuth()
   const [users, setUsers] = useState<UserProfile[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
+  const [requests, setRequests] = useState<ShareRequest[]>([])
   const [loading, setLoading] = useState(true)
 
   // invite form
@@ -21,10 +23,11 @@ export function AdminUsers() {
 
   const refresh = useCallback(() => {
     setLoading(true)
-    Promise.all([listUsers(), listInvites()])
-      .then(([u, i]) => {
+    Promise.all([listUsers(), listInvites(), listPendingRequests()])
+      .then(([u, i, r]) => {
         setUsers(u)
         setInvites(i)
+        setRequests(r)
       })
       .catch((e) => console.error('[admin] load failed', e))
       .finally(() => setLoading(false))
@@ -58,6 +61,14 @@ export function AdminUsers() {
   }
   const revoke = async (inv: Invite) => {
     await deleteInvite(inv.email)
+    refresh()
+  }
+  const approveReq = async (req: ShareRequest) => {
+    await approveShareRequest(req)
+    refresh()
+  }
+  const denyReq = async (req: ShareRequest) => {
+    await denyShareRequest(req.id)
     refresh()
   }
 
@@ -119,6 +130,30 @@ export function AdminUsers() {
           </div>
         )}
       </div>
+
+      {/* ---- Share requests awaiting approval ---- */}
+      {requests.length > 0 && (
+        <div className="invite-card req-card">
+          <div className="invite-list__label">Share requests awaiting approval</div>
+          {requests.map((req) => (
+            <div className="req-row" key={req.id}>
+              <div className="req-row__main">
+                <span className="req-row__who">{req.requestedByEmail}</span> wants to share{' '}
+                <strong>“{req.proposalTitle}”</strong> with <span className="req-row__who">{req.targetEmail}</span> as{' '}
+                <span className="req-row__role">{req.role === 'editor' ? 'editor' : 'viewer'}</span>
+              </div>
+              <div className="req-row__actions">
+                <button className="btn btn--primary btn--sm" onClick={() => approveReq(req)}>
+                  <Icon name="check" size={14} /> Approve
+                </button>
+                <button className="btn btn--ghost btn--sm" onClick={() => denyReq(req)}>
+                  Deny
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="dash__empty">Loading…</div>
