@@ -333,6 +333,103 @@
 }
 
 /* Admin users table */
+/* ---- Invite panel ---- */
+.invite-card {
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.invite-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.invite-form input[type='email'] {
+  flex: 1;
+  min-width: 220px;
+}
+.invite-form select {
+  width: 130px;
+}
+.invite-err {
+  margin-top: 8px;
+  color: var(--red-600, #c0492f);
+  font-size: 13px;
+}
+.invite-list {
+  margin-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+}
+.invite-list__label {
+  font-family: var(--font-semicond, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.invite-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 130px 32px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 14px;
+}
+.invite-row:last-child {
+  border-bottom: none;
+}
+.invite-row__email {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.invite-row__role {
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+.invite-row__state {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.invite-row__state.is-accepted {
+  color: var(--green-700);
+  font-weight: 600;
+}
+
+/* ---- Access-pending gate ---- */
+.app-gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--navy-800);
+  padding: 24px;
+}
+.app-gate__card {
+  background: #fff;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 36px 40px;
+  max-width: 440px;
+  text-align: center;
+}
+.app-gate__card h2 {
+  font-family: var(--font-display, serif);
+  font-size: 26px;
+  color: var(--text-strong);
+  margin: 0 0 10px;
+}
+.app-gate__card p {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-body);
+  margin: 0 0 20px;
+}
+
 .utable {
   background: #fff;
   border: 1px solid var(--border-subtle);

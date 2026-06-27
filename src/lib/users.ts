@@ -18,6 +18,7 @@ import {
 import type { User } from 'firebase/auth'
 import { db } from './firebase'
 import { isAdminEmail } from './config'
+import { getInvite } from './invites'
 import type { OrgRole, UserProfile } from '../types'
 
 function database(): Firestore {
@@ -27,19 +28,36 @@ function database(): Firestore {
 
 const userRef = (uid: string) => doc(database(), 'users', uid)
 
-/** Create the profile on first sign-in (or return the existing one). */
+/**
+ * Create the profile on first sign-in (or return the existing one). Access is
+ * invite-only: a new user is granted a role + enabled ONLY if they are the
+ * bootstrap admin or an admin pre-invited their email. Everyone else is created
+ * blocked (disabled) and must be invited or enabled by an admin.
+ */
 export async function ensureUserProfile(user: User): Promise<UserProfile> {
   const ref = userRef(user.uid)
   const snap = await getDoc(ref)
   if (snap.exists()) return snap.data() as UserProfile
 
   const email = (user.email ?? '').toLowerCase()
+  const invite = isAdminEmail(email) ? null : await getInvite(email).catch(() => null)
+
+  let role: OrgRole = 'viewer'
+  let disabled = true
+  if (isAdminEmail(email)) {
+    role = 'admin'
+    disabled = false
+  } else if (invite) {
+    role = invite.role
+    disabled = false
+  }
+
   const profile: UserProfile = {
     uid: user.uid,
     email,
     displayName: user.displayName || email || 'User',
-    role: isAdminEmail(email) ? 'admin' : 'viewer',
-    disabled: false,
+    role,
+    disabled,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   }

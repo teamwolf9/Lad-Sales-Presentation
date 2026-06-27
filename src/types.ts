@@ -248,6 +248,16 @@ export interface UserProfile {
   updatedAt: number
 }
 
+/** An admin-created invite that pre-authorizes an email at a given role. */
+export interface Invite {
+  /** Lowercased email — also the document id (invites/{email}). */
+  email: string
+  /** Role the user receives on first sign-in. */
+  role: OrgRole
+  invitedByEmail: string
+  createdAt: number
+}
+
 /** Per-proposal access granted to an invited user. */
 export type ShareRole = 'editor' | 'viewer'
 

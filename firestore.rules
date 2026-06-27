@@ -13,15 +13,40 @@ service cloud.firestore {
     function isBootstrapAdmin() {
       return signedIn() && request.auth.token.email == 'teamwolf9@gmail.com';
     }
+    function tokenEmail() { return request.auth.token.email; }
+    function inviteExists() {
+      return exists(/databases/$(database)/documents/invites/$(tokenEmail()));
+    }
+    function invitedRole() {
+      return get(/databases/$(database)/documents/invites/$(tokenEmail())).data.role;
+    }
+
+    // ---- Invites (admin-managed allowlist) ----
+    match /invites/{email} {
+      // Admins see all; a user may read only their own invite (for sign-in).
+      allow read: if isAdmin() || (signedIn() && email == tokenEmail());
+      allow create, update, delete: if isAdmin();
+    }
 
     // ---- User directory ----
     match /users/{uid} {
       allow read: if signedIn();
-      // Self-provision on first sign-in: viewer by default, admin only for the
-      // bootstrap admin email.
+      // Invite-only self-provision on first sign-in:
+      //  - bootstrap admin  → admin, enabled
+      //  - pre-invited email → invited role, enabled
+      //  - anyone else       → viewer, BLOCKED (disabled) until an admin grants access
       allow create: if signedIn() && request.auth.uid == uid
-        && (request.resource.data.role == 'viewer'
-            || (isBootstrapAdmin() && request.resource.data.role == 'admin'));
+        && request.resource.data.uid == uid
+        && (
+          (isBootstrapAdmin()
+            && request.resource.data.role == 'admin'
+            && request.resource.data.disabled == false)
+          || (inviteExists()
+            && request.resource.data.role == invitedRole()
+            && request.resource.data.disabled == false)
+          || (request.resource.data.role == 'viewer'
+            && request.resource.data.disabled == true)
+        );
       // Admins manage anyone; a user may edit their own profile but not their
       // own role or disabled flag.
       allow update: if isAdmin()
