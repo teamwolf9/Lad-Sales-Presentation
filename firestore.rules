@@ -11,6 +11,11 @@ service cloud.firestore {
     function isCreator() { return signedIn() && (myRole() == 'admin' || myRole() == 'creator'); }
     // Admins + executives get a read-only org-wide view of every proposal.
     function isExecutive() { return signedIn() && (myRole() == 'admin' || myRole() == 'executive'); }
+    // A frozen (disabled) account can't read or change anything.
+    function isActive() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('disabled', false) == false;
+    }
     // Bootstrap admin — keep in sync with src/lib/config.ts ADMIN_EMAILS.
     function isBootstrapAdmin() {
       return signedIn() && request.auth.token.email == 'teamwolf9@gmail.com';
@@ -71,7 +76,7 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (signedIn() && resource.data.requestedByUid == request.auth.uid);
       // A member of the proposal may raise a request for themselves.
-      allow create: if signedIn()
+      allow create: if isActive()
         && request.resource.data.requestedByUid == request.auth.uid
         && request.resource.data.status == 'pending'
         && request.auth.uid in get(/databases/$(database)/documents/proposals/$(request.resource.data.proposalId)).data.memberUids;
@@ -82,16 +87,17 @@ service cloud.firestore {
     }
 
     // ---- Proposals ----
+    // Every action also requires an active (non-frozen) account.
     match /proposals/{id} {
-      allow read: if signedIn() && (isExecutive() || request.auth.uid in resource.data.memberUids);
+      allow read: if isActive() && (isExecutive() || request.auth.uid in resource.data.memberUids);
       // Only admins/creators may create, and the new doc must be owned by them
       // with membership limited to themselves.
-      allow create: if isCreator()
+      allow create: if isActive() && isCreator()
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.memberUids.hasOnly([request.auth.uid]);
       // Owner: full control. Admin: may apply approved shares. Editor: may
       // change content but not ownership or the sharing membership.
-      allow update: if signedIn() && (
+      allow update: if isActive() && (
           resource.data.ownerUid == request.auth.uid
           || isAdmin()
           || (resource.data.roles[request.auth.uid] == 'editor'
@@ -99,7 +105,7 @@ service cloud.firestore {
               && request.resource.data.roles == resource.data.roles
               && request.resource.data.memberUids == resource.data.memberUids)
         );
-      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow delete: if isActive() && resource.data.ownerUid == request.auth.uid;
     }
   }
 }

@@ -40,7 +40,12 @@ export function AdminUsers() {
     refresh()
   }
   const toggleDisabled = async (u: UserProfile) => {
-    await setUserDisabled(u.uid, !u.disabled)
+    const freezing = !u.disabled
+    const msg = freezing
+      ? `Freeze ${u.email}? They'll be signed out and can't view or change anything until you unfreeze them.`
+      : `Unfreeze ${u.email}? They'll regain access at their current role.`
+    if (!confirm(msg)) return
+    await setUserDisabled(u.uid, freezing)
     refresh()
   }
 
@@ -63,6 +68,7 @@ export function AdminUsers() {
     }
   }
   const revoke = async (inv: Invite) => {
+    if (!confirm(`Cancel the invite for ${inv.email}? They won't be able to sign in unless re-invited.`)) return
     await deleteInvite(inv.email)
     refresh()
   }
@@ -125,7 +131,7 @@ export function AdminUsers() {
                   <span className={`invite-row__state ${accepted ? 'is-accepted' : ''}`}>
                     {accepted ? 'Joined' : 'Awaiting sign-in'}
                   </span>
-                  <button className="icon-btn" onClick={() => revoke(inv)} title="Revoke invite">
+                  <button className="icon-btn" onClick={() => revoke(inv)} title="Cancel invite">
                     <Icon name="trash" size={14} />
                   </button>
                 </div>
@@ -193,9 +199,9 @@ export function AdminUsers() {
                 <button
                   className={`utable__status ${u.disabled ? 'is-off' : 'is-on'}`}
                   onClick={() => toggleDisabled(u)}
-                  title={u.disabled ? 'Click to grant access' : 'Click to block access'}
+                  title={u.disabled ? 'Frozen — click to unfreeze' : 'Active — click to freeze (block sign-in & access)'}
                 >
-                  {u.disabled ? 'No access' : 'Active'}
+                  {u.disabled ? 'Frozen' : 'Active'}
                 </button>
               </div>
             </div>
