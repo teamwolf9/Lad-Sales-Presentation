@@ -332,6 +332,48 @@
   color: var(--green-700);
 }
 
+/* New-proposal choice dialog */
+.newprop {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+.newprop__opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--n-50);
+  color: var(--text-strong);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+.newprop__opt:hover:not(:disabled) {
+  border-color: var(--green-500);
+  background: var(--green-50);
+  transform: translateY(-1px);
+}
+.newprop__opt:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.newprop__opt svg {
+  color: var(--green-700);
+}
+.newprop__t {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+}
+.newprop__d {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* Admin users table */
 /* ---- Executive overview ---- */
 .exec-stats {

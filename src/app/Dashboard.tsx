@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
-import type { ProposalRecord } from '../types'
+import type { Proposal, ProposalRecord } from '../types'
 import { listAccessibleProposals, createProposal, renameProposal, deleteProposal } from '../lib/proposals'
 import { createEmptyProposal } from '../state/proposal'
+import { parseJobQuoteXml } from '../lib/importQuote'
 import { ShareDialog } from './ShareDialog'
 import { Icon } from '../ui/Icon'
 
@@ -14,6 +15,9 @@ export function Dashboard({ onOpen }: { onOpen: (id: string, title: string, read
   const [list, setList] = useState<ProposalRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [shareId, setShareId] = useState<string | null>(null)
+  const [showNew, setShowNew] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const quoteRef = useRef<HTMLInputElement>(null)
   const canCreate = profile?.role === 'admin' || profile?.role === 'creator'
 
   const refresh = useCallback(() => {
@@ -27,14 +31,63 @@ export function Dashboard({ onOpen }: { onOpen: (id: string, title: string, read
 
   useEffect(refresh, [refresh])
 
-  const newProposal = async () => {
+  /** Stamp prepared-by with the logged-in user. */
+  const withPreparedBy = (data: Proposal): Proposal => ({
+    ...data,
+    preparedBy: {
+      ...data.preparedBy,
+      repName: data.preparedBy.repName || profile?.displayName || profile?.email || '',
+      repEmail: data.preparedBy.repEmail || profile?.email || '',
+    },
+  })
+
+  const create = async (data: Proposal, title: string) => {
     if (!profile) return
+    setBusy(true)
     try {
-      const id = await createProposal(profile, createEmptyProposal())
-      onOpen(id, 'New proposal', false)
+      const id = await createProposal(profile, withPreparedBy(data))
+      setShowNew(false)
+      onOpen(id, title, false)
     } catch (e) {
       console.error(e)
       alert('Could not create a proposal — check your permissions.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const startBlank = () => create(createEmptyProposal(), 'New proposal')
+
+  const onPickQuote = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true)
+    try {
+      const q = parseJobQuoteXml(await file.text())
+      const base = createEmptyProposal()
+      const data: Proposal = {
+        ...base,
+        meta: {
+          ...base.meta,
+          title: q.meta.title || base.meta.title,
+          number: q.meta.number || base.meta.number,
+          date: q.meta.date || base.meta.date,
+        },
+        customer: {
+          ...base.customer,
+          company: q.customer.company,
+          contactName: q.customer.contactName,
+          location: q.customer.location,
+        },
+        projects: q.projects,
+        settings: { ...base.settings, showSummary: true },
+      }
+      await create(data, data.meta.title)
+    } catch (err) {
+      console.error('Quote import failed', err)
+      alert(`Couldn't import that file.\n${err instanceof Error ? err.message : 'Unknown error.'}`)
+      setBusy(false)
     }
   }
 
@@ -62,7 +115,7 @@ export function Dashboard({ onOpen }: { onOpen: (id: string, title: string, read
           </p>
         </div>
         {canCreate && (
-          <button className="btn btn--primary" onClick={newProposal}>
+          <button className="btn btn--primary" onClick={() => setShowNew(true)}>
             <Icon name="plus" size={16} /> New proposal
           </button>
         )}
@@ -117,6 +170,40 @@ export function Dashboard({ onOpen }: { onOpen: (id: string, title: string, read
       )}
 
       {shareId && <ShareDialog proposalId={shareId} onClose={() => { setShareId(null); refresh() }} />}
+
+      {showNew && (
+        <div className="modal" onClick={() => !busy && setShowNew(false)}>
+          <div className="modal__card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal__head">
+              <h3>New proposal</h3>
+              <button className="modal__x" onClick={() => !busy && setShowNew(false)} aria-label="Close">✕</button>
+            </div>
+            <p className="share__hint" style={{ marginTop: 0 }}>
+              Start from a Business Central quote (.xml) to pre-fill the customer, number, date, and line items — or
+              start from a blank proposal. Everything stays editable.
+            </p>
+            <div className="newprop">
+              <button className="newprop__opt" disabled={busy} onClick={() => quoteRef.current?.click()}>
+                <Icon name="box" size={22} />
+                <span className="newprop__t">{busy ? 'Importing…' : 'Import a quote (.xml)'}</span>
+                <span className="newprop__d">Upload your WSI Job Quote export</span>
+              </button>
+              <button className="newprop__opt" disabled={busy} onClick={startBlank}>
+                <Icon name="plus" size={22} />
+                <span className="newprop__t">Start blank</span>
+                <span className="newprop__d">Build from scratch</span>
+              </button>
+            </div>
+            <input
+              ref={quoteRef}
+              type="file"
+              accept=".xml,text/xml,application/xml"
+              onChange={onPickQuote}
+              style={{ display: 'none' }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

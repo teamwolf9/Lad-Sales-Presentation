@@ -16,6 +16,8 @@ vite.config.d.ts
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+extensions/*.secret.local
+extensions/*.env.local
 
 # Raw design-system drop + source archive (reference only, large binaries)
 /design-system/

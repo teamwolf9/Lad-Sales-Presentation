@@ -86,11 +86,15 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
   const importQuoteFile = async (file: File) => {
     try {
       const text = await file.text()
-      const { project, customer, notes } = parseJobQuoteXml(text, p.settings.taxRate)
+      const { meta, customer, projects, notes } = parseJobQuoteXml(text, p.settings.taxRate)
       setProposal((prev) => ({
         ...prev,
-        projects: [...prev.projects, project],
-        // Pre-fill empty customer fields from the quote's bill-to details.
+        projects: [...prev.projects, ...projects],
+        // Pre-fill empty header + customer fields from the quote.
+        meta: {
+          ...prev.meta,
+          number: prev.meta.number || meta.number,
+        },
         customer: {
           ...prev.customer,
           company: prev.customer.company || customer.company,
@@ -99,7 +103,7 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
         },
         settings: { ...prev.settings, showSummary: true },
       }))
-      setNotice({ kind: 'ok', lines: [`Imported “${project.title}”`, ...notes] })
+      setNotice({ kind: 'ok', lines: [`Imported ${projects.length} project${projects.length === 1 ? '' : 's'}`, ...notes] })
       setStep(6) // jump to Projects so the new project is visible
     } catch (err) {
       console.error('Quote import failed', err)
