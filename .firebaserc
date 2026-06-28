@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "proposal-builder-3f23c"
+  },
+  "targets": {},
+  "etags": {
+    "proposal-builder-3f23c": {
+      "extensionInstances": {
+        "firestore-send-email": "700b641841b4e3c6037f3d339bd59db87d866ffc18a00431359e1d079a5c4d1b"
+      }
+    }
   }
 }

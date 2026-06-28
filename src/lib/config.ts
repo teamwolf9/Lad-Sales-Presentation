@@ -8,13 +8,13 @@
 export const ADMIN_EMAILS = ['teamwolf9@gmail.com']
 
 /** Public site URL — used in invite emails so recipients have a link to sign in. */
-export const SITE_URL = 'https://proposal-builder-3f23c.web.app'
+export const SITE_URL = 'https://pb.ladcustomerservice.com'
 
 /**
- * From-address for outgoing invite emails. The domain (ladcustomerservice.com)
- * must be verified in the email provider (Resend) for delivery to succeed.
+ * From-address for outgoing invite emails. Must be a verified sender/domain in
+ * the email provider (Postmark: irrivue.com is verified on the active server).
  */
-export const MAIL_FROM = 'Lad Irrigation <noreply@ladcustomerservice.com>'
+export const MAIL_FROM = 'Lad Irrigation <notifications@irrivue.com>'
 
 export function isAdminEmail(email: string | null | undefined): boolean {
   return !!email && ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(email.toLowerCase())
