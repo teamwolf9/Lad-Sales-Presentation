@@ -26,7 +26,7 @@ export const LAD_HOURS = {
 }
 
 export const LAD_STORES: Store[] = [
-  { city: 'Moses Lake', state: 'WA', phone: '(509) 765-8864', address: '1030 E Broadway Ave', zip: '98837', hq: true },
+  { city: 'Moses Lake', state: 'WA', phone: '(509) 765-8864', address: '1030 E Broadway Ave', zip: '98837' },
   { city: 'Othello', state: 'WA', phone: '(509) 488-5264', address: '', zip: '' },
   { city: 'Basin City', state: 'WA', phone: '(509) 269-4725', address: '', zip: '' },
   { city: 'Royal City', state: 'WA', phone: '(509) 331-5032', address: '', zip: '' },
