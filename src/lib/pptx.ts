@@ -52,14 +52,27 @@ function chunk<T>(arr: T[], n: number): T[][] {
 }
 const LINES_PER_SLIDE = 12
 
-/** Resolve an image src into a pptxgenjs image source (data: stays inline, anything else is fetched by URL). */
-function imgSrc(src: string): { data: string } | { path: string } | null {
+/**
+ * Resolve an image src to an inline data URL for pptxgenjs. Pre-fetches remote
+ * URLs ourselves (with try/catch) so one unreachable image is skipped rather
+ * than failing the whole export. Returns null if it can't be loaded.
+ */
+async function loadImg(src: string): Promise<{ data: string } | null> {
   if (!src) return null
   if (src.startsWith('data:')) return { data: src }
   try {
-    return { path: new URL(src, window.location.href).href }
+    const url = new URL(src, window.location.href).href
+    const resp = await fetch(url)
+    if (!resp.ok) return null
+    const blob = await resp.blob()
+    return await new Promise<{ data: string } | null>((resolve) => {
+      const fr = new FileReader()
+      fr.onload = () => resolve({ data: String(fr.result) })
+      fr.onerror = () => resolve(null)
+      fr.readAsDataURL(blob)
+    })
   } catch {
-    return { path: src }
+    return null
   }
 }
 
@@ -121,11 +134,11 @@ export async function exportProposalPptx(proposal: Proposal): Promise<void> {
   {
     const s = pptx.addSlide()
     s.background = { color: C.navyDeep }
-    const cover = imgSrc(B.photos.pivotSunset)
+    const cover = await loadImg(B.photos.pivotSunset)
     if (cover) s.addImage({ ...cover, x: 0, y: 0, w: W, h: H, sizing: { type: 'cover', w: W, h: H } } as any)
     s.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: W, h: H, fill: { color: C.navyDeep, transparency: 35 } })
     s.addShape(pptx.ShapeType.rect, { x: 0, y: H - 3.2, w: W, h: 3.2, fill: { color: C.navyDeep, transparency: 12 } })
-    const logo = imgSrc(B.logos.primary)
+    const logo = await loadImg(B.logos.primary)
     if (logo) s.addImage({ ...logo, x: MX, y: 0.55, w: 1.5, h: 1.5 } as any)
     s.addText(`${formatDate(p.meta.date)}\n${p.meta.number}`, { x: W - 4 - MX, y: 0.6, w: 4, h: 0.7, align: 'right', fontSize: 11, color: C.white, fontFace: FONT })
     s.addText(B.tagline.toUpperCase(), { x: MX, y: 3.0, w: W - MX * 2, h: 0.3, fontSize: 13, bold: true, color: C.green, fontFace: FONT, charSpacing: 3 })
@@ -143,7 +156,7 @@ export async function exportProposalPptx(proposal: Proposal): Promise<void> {
       s.addText(m.k.toUpperCase(), { x, y: 6.45, w: 2.5, h: 0.25, fontSize: 9, color: C.green, charSpacing: 1, fontFace: FONT })
       s.addText(m.v, { x, y: 6.7, w: 2.6, h: 0.4, fontSize: 15, bold: true, color: C.white, fontFace: FONT })
     })
-    const eo = imgSrc(B.logos.employeeOwned)
+    const eo = await loadImg(B.logos.employeeOwned)
     if (eo) s.addImage({ ...eo, x: W - 3.0 - MX, y: 6.62, w: 3.0, h: 0.36, sizing: { type: 'contain', w: 3.0, h: 0.36 } } as any)
   }
 
@@ -151,10 +164,10 @@ export async function exportProposalPptx(proposal: Proposal): Promise<void> {
   if (showMap) {
     const s = pptx.addSlide()
     s.background = { color: C.white }
-    const map = imgSrc(p.map.imageUrl)
+    const map = await loadImg(p.map.imageUrl)
     if (map) s.addImage({ ...map, x: MX, y: 0.5, w: 8.4, h: 6.4, sizing: { type: 'contain', w: 8.4, h: 6.4 } } as any)
     const bx = 9.4
-    const logo = imgSrc(B.logos.primary)
+    const logo = await loadImg(B.logos.primary)
     if (logo) s.addImage({ ...logo, x: bx, y: 0.55, w: 1.0, h: 1.0 } as any)
     const fields: [string, string][] = [
       ['Customer', p.customer.company || '—'],
@@ -225,18 +238,19 @@ export async function exportProposalPptx(proposal: Proposal): Promise<void> {
         story.map((para) => ({ text: para, options: { paraSpaceAfter: 8 } })),
         { x: MX, y: 1.9, w: 7.2, h: 2.2, fontSize: 13, color: C.body, fontFace: FONT, lineSpacingMultiple: 1.18, valign: 'top' },
       )
-    const photo = imgSrc(B.photos.pumpInstall)
+    const photo = await loadImg(B.photos.pumpInstall)
     if (photo) s.addImage({ ...photo, x: 8.3, y: 1.9, w: 4.3, h: 2.5, rounding: true, sizing: { type: 'cover', w: 4.3, h: 2.5 } } as any)
     if (p.team.length) {
       s.addText('THE TEAM ON YOUR PROJECT', { x: MX, y: 4.5, w: W - MX * 2, h: 0.3, fontSize: 11, bold: true, color: C.green, charSpacing: 2, fontFace: FONT })
       const team = p.team.slice(0, 4)
       const cols = team.length <= 2 ? Math.max(team.length, 1) : 4
       const cw = (W - MX * 2 - 0.35 * (cols - 1)) / cols
-      team.forEach((m, i) => {
+      for (let i = 0; i < team.length; i++) {
+        const m = team[i]
         const x = MX + i * (cw + 0.35)
         const y = 4.9
         s.addShape(pptx.ShapeType.roundRect, { x, y, w: cw, h: 1.95, fill: { color: C.white }, line: { color: C.line, width: 1 }, rectRadius: 0.06 } as any)
-        const ph = imgSrc(m.photoUrl)
+        const ph = await loadImg(m.photoUrl)
         if (ph) s.addImage({ ...ph, x: x + 0.2, y: y + 0.2, w: 0.85, h: 0.85, rounding: true, sizing: { type: 'cover', w: 0.85, h: 0.85 } } as any)
         else {
           s.addShape(pptx.ShapeType.ellipse, { x: x + 0.2, y: y + 0.2, w: 0.85, h: 0.85, fill: { color: C.green50 } })
@@ -245,7 +259,7 @@ export async function exportProposalPptx(proposal: Proposal): Promise<void> {
         s.addText(m.name || 'Team member', { x: x + 0.15, y: y + 1.1, w: cw - 0.3, h: 0.28, fontSize: 13, bold: true, color: C.navy, fontFace: FONT })
         if (m.title) s.addText(m.title, { x: x + 0.15, y: y + 1.36, w: cw - 0.3, h: 0.24, fontSize: 10, bold: true, color: C.greenPress, fontFace: FONT })
         if (m.credential) s.addText(m.credential, { x: x + 0.15, y: y + 1.58, w: cw - 0.3, h: 0.22, fontSize: 8.5, color: C.muted, fontFace: FONT })
-      })
+      }
     }
     footer(s)
   }
@@ -420,12 +434,13 @@ export async function exportProposalPptx(proposal: Proposal): Promise<void> {
 
   // ------------------------- EQUIPMENT (legacy line items) -------------------------
   if (p.lineItems.length) {
-    p.lineItems.forEach((item, idx) => {
+    for (let idx = 0; idx < p.lineItems.length; idx++) {
+      const item = p.lineItems[idx]
       const s = pptx.addSlide()
       s.background = { color: C.white }
       if (idx === 0) header(s, 'The system', 'Equipment & services')
       const top = idx === 0 ? 1.9 : 0.7
-      const media = imgSrc(item.imageUrl)
+      const media = await loadImg(item.imageUrl)
       const textX = media ? 6.0 : MX
       const textW = media ? W - 6.0 - MX : W - MX * 2
       if (media) s.addImage({ ...media, x: MX, y: top, w: 4.9, h: 4.6, rounding: true, sizing: { type: 'cover', w: 4.9, h: 4.6 } } as any)
@@ -455,7 +470,7 @@ export async function exportProposalPptx(proposal: Proposal): Promise<void> {
         { x: textX, y: 5.85, w: textW, h: 0.5, fontFace: FONT, align: 'left' },
       )
       footer(s)
-    })
+    }
   }
 
   // ---------------------------- PRICING (legacy) ----------------------------
@@ -514,7 +529,7 @@ export async function exportProposalPptx(proposal: Proposal): Promise<void> {
   {
     const s = pptx.addSlide()
     s.background = { color: C.navyDeep }
-    const logo = imgSrc(B.logos.white) || imgSrc(B.logos.primary)
+    const logo = (await loadImg(B.logos.white)) || (await loadImg(B.logos.primary))
     if (logo) s.addImage({ ...logo, x: MX, y: 0.8, w: 2.2, h: 1.0, sizing: { type: 'contain', w: 2.2, h: 1.0 } } as any)
     s.addText("LET'S GET WATER WHERE IT'S NEEDED", { x: MX, y: 2.5, w: W - MX * 2, h: 0.3, fontSize: 12, bold: true, color: C.green, charSpacing: 3, fontFace: FONT })
     s.addText('Put Lad to the test.', { x: MX, y: 2.85, w: W - MX * 2, h: 0.9, fontSize: 40, bold: true, color: C.white, fontFace: FONT })
