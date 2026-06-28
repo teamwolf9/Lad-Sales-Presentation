@@ -252,9 +252,9 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
               </button>
             </div>
 
-            <Text label="Proposal title" value={p.meta.title} onChange={(v) => meta({ title: v })} />
+            <Text label="Proposal title" maxLength={70} value={p.meta.title} onChange={(v) => meta({ title: v })} />
             <div className="field-row">
-              <Text label="Proposal #" value={p.meta.number} onChange={(v) => meta({ number: v })} />
+              <Text label="Proposal #" maxLength={30} value={p.meta.number} onChange={(v) => meta({ number: v })} />
               <div className="field">
                 <label>Date</label>
                 <input type="date" value={p.meta.date} onChange={(e) => meta({ date: e.target.value })} />
@@ -264,11 +264,11 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
             <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
               Prepared by
             </div>
-            <Text label="Your name" value={p.preparedBy.repName} onChange={(v) => rep({ repName: v })} />
-            <Text label="Title" value={p.preparedBy.repTitle} onChange={(v) => rep({ repTitle: v })} />
+            <Text label="Your name" maxLength={50} value={p.preparedBy.repName} onChange={(v) => rep({ repName: v })} />
+            <Text label="Title" maxLength={50} value={p.preparedBy.repTitle} onChange={(v) => rep({ repTitle: v })} />
             <div className="field-row">
-              <Text label="Phone" value={p.preparedBy.repPhone} onChange={(v) => rep({ repPhone: v })} />
-              <Text label="Email" value={p.preparedBy.repEmail} onChange={(v) => rep({ repEmail: v })} />
+              <Text label="Phone" maxLength={24} value={p.preparedBy.repPhone} onChange={(v) => rep({ repPhone: v })} />
+              <Text label="Email" maxLength={80} value={p.preparedBy.repEmail} onChange={(v) => rep({ repEmail: v })} />
             </div>
           </div>
         )}
@@ -278,15 +278,15 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           <div>
             <h2 className="section-title">Customer</h2>
             <p className="section-hint">Who this proposal is for — shown on the cover.</p>
-            <Text label="Company / operation" value={p.customer.company} onChange={(v) => cust({ company: v })} placeholder="e.g. Columbia Basin Farms" />
-            <Text label="Location" value={p.customer.location} onChange={(v) => cust({ location: v })} placeholder="e.g. Quincy, WA" />
+            <Text label="Company / operation" maxLength={60} value={p.customer.company} onChange={(v) => cust({ company: v })} placeholder="e.g. Columbia Basin Farms" />
+            <Text label="Location" maxLength={70} value={p.customer.location} onChange={(v) => cust({ location: v })} placeholder="e.g. Quincy, WA" />
             <div className="field-row">
-              <Text label="Contact name" value={p.customer.contactName} onChange={(v) => cust({ contactName: v })} />
-              <Text label="Contact title" value={p.customer.contactTitle} onChange={(v) => cust({ contactTitle: v })} />
+              <Text label="Contact name" maxLength={50} value={p.customer.contactName} onChange={(v) => cust({ contactName: v })} />
+              <Text label="Contact title" maxLength={50} value={p.customer.contactTitle} onChange={(v) => cust({ contactTitle: v })} />
             </div>
             <div className="field-row">
-              <Text label="Email" value={p.customer.email} onChange={(v) => cust({ email: v })} />
-              <Text label="Phone" value={p.customer.phone} onChange={(v) => cust({ phone: v })} />
+              <Text label="Email" maxLength={80} value={p.customer.email} onChange={(v) => cust({ email: v })} />
+              <Text label="Phone" maxLength={24} value={p.customer.phone} onChange={(v) => cust({ phone: v })} />
             </div>
           </div>
         )}
@@ -310,14 +310,14 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
             </div>
 
             <div style={{ height: 18 }} />
-            <Area label="Cover message" rows={4} value={p.coverMessage} onChange={(v) => setProposal({ ...p, coverMessage: v })} />
+            <Area label="Cover message" rows={4} maxLength={420} value={p.coverMessage} onChange={(v) => setProposal({ ...p, coverMessage: v })} />
 
             <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
               Our approach (one line each)
             </div>
             {p.scopeNotes.map((n, i) => (
               <div className="spec-row" key={i} style={{ gridTemplateColumns: '1fr 32px' }}>
-                <input value={n} onChange={(e) => arrEdit('scopeNotes', i, e.target.value)} />
+                <input value={n} maxLength={140} onChange={(e) => arrEdit('scopeNotes', i, e.target.value)} />
                 <button className="icon-btn" onClick={() => arrRemove('scopeNotes', i)}>
                   <Icon name="trash" size={14} />
                 </button>
@@ -356,13 +356,13 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
               </label>
             </div>
 
-            <Text label="About heading" value={p.aboutHeading} onChange={(v) => setProposal({ ...p, aboutHeading: v })} />
+            <Text label="About heading" maxLength={70} value={p.aboutHeading} onChange={(v) => setProposal({ ...p, aboutHeading: v })} />
             <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
               Our story (one paragraph each)
             </div>
             {p.aboutBody.map((para, i) => (
               <div className="spec-row" key={i} style={{ gridTemplateColumns: '1fr 32px', alignItems: 'start' }}>
-                <textarea rows={3} value={para} onChange={(e) => arrEdit('aboutBody', i, e.target.value)} />
+                <textarea rows={3} maxLength={500} value={para} onChange={(e) => arrEdit('aboutBody', i, e.target.value)} />
                 <button className="icon-btn" onClick={() => arrRemove('aboutBody', i)}>
                   <Icon name="trash" size={14} />
                 </button>
@@ -414,12 +414,12 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
                     </button>
                   </div>
                   <div className="field-row">
-                    <Text label="Name" value={m.name} onChange={(v) => updateMember(m.id, { name: v })} />
-                    <Text label="Title" value={m.title} onChange={(v) => updateMember(m.id, { title: v })} />
+                    <Text label="Name" maxLength={50} value={m.name} onChange={(v) => updateMember(m.id, { name: v })} />
+                    <Text label="Title" maxLength={50} value={m.title} onChange={(v) => updateMember(m.id, { title: v })} />
                   </div>
-                  <Text label="Credential / focus (optional)" value={m.credential} onChange={(v) => updateMember(m.id, { credential: v })} placeholder="e.g. 20 yrs · Pump systems" />
-                  <Area label="Short bio (optional)" rows={2} value={m.bio} onChange={(v) => updateMember(m.id, { bio: v })} placeholder="1–2 sentences about this person." />
-                  <Text label="Headshot URL (optional)" value={m.photoUrl} onChange={(v) => updateMember(m.id, { photoUrl: v })} placeholder="https://…" />
+                  <Text label="Credential / focus (optional)" maxLength={50} value={m.credential} onChange={(v) => updateMember(m.id, { credential: v })} placeholder="e.g. 20 yrs · Pump systems" />
+                  <Area label="Short bio (optional)" rows={2} maxLength={240} value={m.bio} onChange={(v) => updateMember(m.id, { bio: v })} placeholder="1–2 sentences about this person." />
+                  <Text label="Headshot URL (optional)" maxLength={400} value={m.photoUrl} onChange={(v) => updateMember(m.id, { photoUrl: v })} placeholder="https://…" />
                 </div>
               ))
             )}
@@ -469,14 +469,14 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
             )}
             <input ref={mapFileRef} type="file" accept="image/png,image/jpeg" onChange={onPickMapImage} style={{ display: 'none' }} />
 
-            <Text label="Caption" value={p.map.caption} onChange={(v) => mapPatch({ caption: v })} placeholder="e.g. Snake View Pipeline & Pump Replacement" />
+            <Text label="Caption" maxLength={70} value={p.map.caption} onChange={(v) => mapPatch({ caption: v })} placeholder="e.g. Snake View Pipeline & Pump Replacement" />
             <div className="field-row">
-              <Text label="Scale" value={p.map.scale} onChange={(v) => mapPatch({ scale: v })} placeholder="1 inch : 600 feet" />
-              <Text label="Quotation / order #" value={p.map.quoteNumber} onChange={(v) => mapPatch({ quoteNumber: v })} />
+              <Text label="Scale" maxLength={30} value={p.map.scale} onChange={(v) => mapPatch({ scale: v })} placeholder="1 inch : 600 feet" />
+              <Text label="Quotation / order #" maxLength={30} value={p.map.quoteNumber} onChange={(v) => mapPatch({ quoteNumber: v })} />
             </div>
             <div className="field-row">
-              <Text label="Designer" value={p.map.designer} onChange={(v) => mapPatch({ designer: v })} />
-              <Text label="Drawn by" value={p.map.drawnBy} onChange={(v) => mapPatch({ drawnBy: v })} />
+              <Text label="Designer" maxLength={40} value={p.map.designer} onChange={(v) => mapPatch({ designer: v })} />
+              <Text label="Drawn by" maxLength={40} value={p.map.drawnBy} onChange={(v) => mapPatch({ drawnBy: v })} />
             </div>
           </div>
         )}
@@ -539,18 +539,18 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
               Include the Improvements Analysis page
             </label>
 
-            <Text label="Heading" value={p.analysis.heading} onChange={(v) => analysisPatch({ heading: v })} />
+            <Text label="Heading" maxLength={50} value={p.analysis.heading} onChange={(v) => analysisPatch({ heading: v })} />
             <div className="field-row">
-              <Text label="Sub-head" value={p.analysis.subhead} onChange={(v) => analysisPatch({ subhead: v })} />
-              <Text label="By" value={p.analysis.byLine} onChange={(v) => analysisPatch({ byLine: v })} />
+              <Text label="Sub-head" maxLength={50} value={p.analysis.subhead} onChange={(v) => analysisPatch({ subhead: v })} />
+              <Text label="By" maxLength={60} value={p.analysis.byLine} onChange={(v) => analysisPatch({ byLine: v })} />
             </div>
-            <Text label="For (customer line)" value={p.analysis.forLine} onChange={(v) => analysisPatch({ forLine: v })} placeholder="For Frank Tiegs, LLC" />
+            <Text label="For (customer line)" maxLength={60} value={p.analysis.forLine} onChange={(v) => analysisPatch({ forLine: v })} placeholder="For Frank Tiegs, LLC" />
             <div className="field-row">
-              <Text label="Existing column" value={p.analysis.existingLabel} onChange={(v) => analysisPatch({ existingLabel: v })} placeholder="EXISTING @ 26,800 GPM" />
-              <Text label="New column" value={p.analysis.newLabel} onChange={(v) => analysisPatch({ newLabel: v })} placeholder="NEW @ 32,000 GPM" />
+              <Text label="Existing column" maxLength={45} value={p.analysis.existingLabel} onChange={(v) => analysisPatch({ existingLabel: v })} placeholder="EXISTING @ 26,800 GPM" />
+              <Text label="New column" maxLength={45} value={p.analysis.newLabel} onChange={(v) => analysisPatch({ newLabel: v })} placeholder="NEW @ 32,000 GPM" />
             </div>
-            <Area label="Summary" rows={3} value={p.analysis.summary} onChange={(v) => analysisPatch({ summary: v })} />
-            <Area label="Conclusion" rows={3} value={p.analysis.conclusion} onChange={(v) => analysisPatch({ conclusion: v })} />
+            <Area label="Summary" rows={3} maxLength={600} value={p.analysis.summary} onChange={(v) => analysisPatch({ summary: v })} />
+            <Area label="Conclusion" rows={3} maxLength={600} value={p.analysis.conclusion} onChange={(v) => analysisPatch({ conclusion: v })} />
 
             <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
               Feature rows — pressure at point &amp; change to next point
@@ -558,18 +558,18 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
             {p.analysis.rows.map((r) => (
               <div className="li-card" key={r.id}>
                 <div className="li-card__head">
-                  <input style={{ fontWeight: 600 }} placeholder="Feature (e.g. River BP Suction)" value={r.feature} onChange={(e) => updateRow(r.id, { feature: e.target.value })} />
+                  <input style={{ fontWeight: 600 }} maxLength={50} placeholder="Feature (e.g. River BP Suction)" value={r.feature} onChange={(e) => updateRow(r.id, { feature: e.target.value })} />
                   <button className="icon-btn" onClick={() => removeRow(r.id)} title="Remove">
                     <Icon name="trash" size={14} />
                   </button>
                 </div>
                 <div className="field-row">
-                  <Text label="Existing — at point" value={r.exAt} onChange={(v) => updateRow(r.id, { exAt: v })} />
-                  <Text label="Existing — change" value={r.exChange} onChange={(v) => updateRow(r.id, { exChange: v })} />
+                  <Text label="Existing — at point" maxLength={12} value={r.exAt} onChange={(v) => updateRow(r.id, { exAt: v })} />
+                  <Text label="Existing — change" maxLength={12} value={r.exChange} onChange={(v) => updateRow(r.id, { exChange: v })} />
                 </div>
                 <div className="field-row">
-                  <Text label="New — at point" value={r.newAt} onChange={(v) => updateRow(r.id, { newAt: v })} />
-                  <Text label="New — change" value={r.newChange} onChange={(v) => updateRow(r.id, { newChange: v })} />
+                  <Text label="New — at point" maxLength={12} value={r.newAt} onChange={(v) => updateRow(r.id, { newAt: v })} />
+                  <Text label="New — change" maxLength={12} value={r.newChange} onChange={(v) => updateRow(r.id, { newChange: v })} />
                 </div>
               </div>
             ))}
@@ -592,7 +592,7 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
               </div>
             </div>
 
-            <Text label="Summary subtitle" value={p.settings.summarySubtitle} onChange={(v) => settings({ summarySubtitle: v })} placeholder="Pump Station & Ancillary Infrastructure Upgrades" />
+            <Text label="Summary subtitle" maxLength={90} value={p.settings.summarySubtitle} onChange={(v) => settings({ summarySubtitle: v })} placeholder="Pump Station & Ancillary Infrastructure Upgrades" />
 
             <div className="mini-label" style={{ color: 'rgba(233,241,246,.65)' }}>
               Payment schedule
@@ -636,7 +636,7 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
             </div>
             {p.terms.map((t, i) => (
               <div className="spec-row" key={i} style={{ gridTemplateColumns: '1fr 32px', alignItems: 'start' }}>
-                <textarea rows={2} value={t} onChange={(e) => arrEdit('terms', i, e.target.value)} />
+                <textarea rows={2} maxLength={500} value={t} onChange={(e) => arrEdit('terms', i, e.target.value)} />
                 <button className="icon-btn" onClick={() => arrRemove('terms', i)}>
                   <Icon name="trash" size={14} />
                 </button>

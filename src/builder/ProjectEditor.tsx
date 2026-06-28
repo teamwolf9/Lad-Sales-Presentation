@@ -56,12 +56,12 @@ export function ProjectEditor({
       </div>
 
       <div className="field-row">
-        <Text label="Project #" value={project.number} onChange={(v) => set('number', v)} placeholder="PR01966" />
+        <Text label="Project #" maxLength={30} value={project.number} onChange={(v) => set('number', v)} placeholder="PR01966" />
         <Num label="Tax rate" suffix="%" value={project.taxRate} step={0.1} onChange={(v) => set('taxRate', v)} />
       </div>
-      <Text label="Title" value={project.title} onChange={(v) => set('title', v)} placeholder="e.g. Snakeview River Lift Station" />
-      <Text label="Farm / location" value={project.location} onChange={(v) => set('location', v)} placeholder="e.g. Snake View Farm · Burbank, WA" />
-      <Area label="Scope summary" rows={2} value={project.description} onChange={(v) => set('description', v)} placeholder="One sentence describing this scope of work." />
+      <Text label="Title" maxLength={70} value={project.title} onChange={(v) => set('title', v)} placeholder="e.g. Snakeview River Lift Station" />
+      <Text label="Farm / location" maxLength={70} value={project.location} onChange={(v) => set('location', v)} placeholder="e.g. Snake View Farm · Burbank, WA" />
+      <Area label="Scope summary" rows={2} maxLength={240} value={project.description} onChange={(v) => set('description', v)} placeholder="One sentence describing this scope of work." />
 
       {/* Map / photo upload */}
       <div className="mini-label">Project map / photo (optional)</div>
@@ -87,6 +87,7 @@ export function ProjectEditor({
             <input
               className="pline__code"
               placeholder={l.isNote ? 'note' : 'No. / SKU'}
+              maxLength={24}
               value={l.code}
               onChange={(e) => setLine(l.id, { code: e.target.value })}
             />
@@ -111,6 +112,7 @@ export function ProjectEditor({
           <textarea
             className="pline__desc"
             rows={2}
+            maxLength={160}
             placeholder="Description"
             value={l.description}
             onChange={(e) => setLine(l.id, { description: e.target.value })}

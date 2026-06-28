@@ -181,6 +181,18 @@ button {
   color: rgba(234, 241, 245, 0.6);
   margin-bottom: 6px;
 }
+.field__count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(234, 241, 245, 0.4);
+  text-align: right;
+  margin-top: 3px;
+  min-height: 12px;
+  line-height: 12px;
+}
+.field__count--max {
+  color: var(--gold-300);
+}
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
