@@ -33,6 +33,7 @@ export interface Brand {
     employeeOwned: string
   }
   photos: {
+    coverHero: string
     pivotSunset: string
     orchard: string
     pumpStation: string
@@ -60,6 +61,7 @@ export const LAD_BRAND: Brand = {
     employeeOwned: 'brand/logos/employee-owned.png',
   },
   photos: {
+    coverHero: 'brand/photos/cover-hero.jpg',
     pivotSunset: 'brand/photos/photo-pivot-sunset.jpg',
     orchard: 'brand/photos/photo-orchard.jpg',
     pumpStation: 'brand/photos/photo-pump-station.jpg',

@@ -93,7 +93,7 @@ export function SlideDeck({ proposal }: { proposal: Proposal }) {
     <>
       {/* ----------------------------- COVER ----------------------------- */}
       <Slide className="slide--cover">
-        <img className="slide-cover__photo" src={B.photos.pivotSunset} alt="" />
+        <img className="slide-cover__photo" src={B.photos.coverHero} alt="" />
         <div className="slide-cover__scrim" />
         <div className="slide-cover__top">
           <img className="slide-cover__logo" src={B.logos.primary} alt={B.name} />

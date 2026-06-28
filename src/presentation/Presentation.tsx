@@ -112,7 +112,7 @@ export function Presentation({ proposal, activeSection }: { proposal: Proposal; 
     <>
       {/* ----------------------------- COVER ----------------------------- */}
       <section {...sec('cover', 'sheet cover')}>
-        <img className="cover__photo" src={B.photos.pivotSunset} alt="" />
+        <img className="cover__photo" src={B.photos.coverHero} alt="" />
         <div className="cover__scrim" />
         <div className="cover__inner">
           <div className="cover__top">
