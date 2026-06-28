@@ -18,6 +18,7 @@ firestore-debug.log
 ui-debug.log
 extensions/*.secret.local
 extensions/*.env.local
+extensions/*.env
 
 # Raw design-system drop + source archive (reference only, large binaries)
 /design-system/
