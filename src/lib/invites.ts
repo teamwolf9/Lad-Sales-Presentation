@@ -17,7 +17,7 @@ import {
   type Firestore,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import { SITE_URL } from './config'
+import { SITE_URL, MAIL_FROM } from './config'
 import type { Invite, OrgRole } from '../types'
 
 function database(): Firestore {
@@ -89,7 +89,7 @@ function buildInviteEmail(to: string, role: OrgRole, invitedByEmail: string) {
       </p>
     </div>
   </div>`
-  return { to: [to], message: { subject, text, html } }
+  return { to: [to], from: MAIL_FROM, message: { subject, text, html } }
 }
 
 /** Admin: revoke a pending invite. */
