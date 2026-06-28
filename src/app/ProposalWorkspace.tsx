@@ -15,7 +15,21 @@ function Preview({ activeSection }: { activeSection: string }) {
   const [exporting, setExporting] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Scroll the live document to the section the current builder step is editing.
+  // Signature of which optional sections are currently visible. Changes only when
+  // a page is toggled/added (e.g. a map is uploaded) — NOT on ordinary typing —
+  // so we can re-scroll to a section the moment it appears without yanking on edits.
+  const sectionSig = [
+    proposal.map.enabled && !!proposal.map.imageUrl,
+    proposal.settings.showServices,
+    proposal.analysis.enabled,
+    proposal.settings.showAbout,
+    proposal.settings.showStores,
+    proposal.settings.showSummary && proposal.projects.length > 0,
+    proposal.projects.length,
+  ].join('|')
+
+  // Scroll the live document to the section the current builder step is editing
+  // (and re-run when that section first becomes visible).
   useEffect(() => {
     if (view !== 'document') return
     const container = scrollRef.current
@@ -23,9 +37,7 @@ function Preview({ activeSection }: { activeSection: string }) {
     if (!container || !target) return
     const top = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 24
     container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
-    // Intentionally not keyed on proposal edits — only jump when the step/view changes,
-    // so typing doesn't yank the preview back to the top of the section.
-  }, [activeSection, view, zoom])
+  }, [activeSection, view, zoom, sectionSig])
 
   const handlePptx = async () => {
     setExporting(true)
