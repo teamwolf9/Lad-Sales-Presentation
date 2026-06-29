@@ -6,7 +6,11 @@ import { LAD_TEAM, type RosterPerson } from '../data/team'
 import type { Project } from '../types'
 import { Icon } from '../ui/Icon'
 import { uid, formatCurrency, cls } from '../lib/util'
-import { uploadImageFile } from '../lib/uploads'
+import { uploadImageFile, uploadDataUrl } from '../lib/uploads'
+import { mapsEnabled, imageAspectOf } from '../lib/maps'
+import { MapStage } from '../presentation/MapStage'
+import { GoogleMapPicker } from './GoogleMapPicker'
+import { ErrorBoundary } from '../ui/ErrorBoundary'
 import { parseJobQuoteXml } from '../lib/importQuote'
 import { useAuth } from '../lib/auth'
 import { investmentTotal } from '../lib/pricing'
@@ -26,6 +30,7 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
   const { proposal, setProposal, reset } = useProposal()
   const { user } = useAuth()
   const [step, setStep] = useState(0)
+  const [mapPicker, setMapPicker] = useState(false)
   const mapFileRef = useRef<HTMLInputElement>(null)
   const p = proposal
 
@@ -147,11 +152,23 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
     const file = e.target.files?.[0]
     if (!file) return
     try {
-      mapPatch({ imageUrl: await uploadImageFile(file, user?.uid, 'maps'), enabled: true })
+      const url = await uploadImageFile(file, user?.uid, 'maps')
+      const aspect = await imageAspectOf(url)
+      mapPatch({ imageUrl: url, imageAspect: aspect, enabled: true })
     } catch {
       alert('Could not read that image. Try a JPG or PNG.')
     }
     e.target.value = ''
+  }
+
+  const onMapCapture = async (dataUrl: string, aspect: number, scale: string) => {
+    try {
+      const url = await uploadDataUrl(dataUrl, user?.uid, 'maps')
+      mapPatch({ imageUrl: url, imageAspect: aspect, scale, enabled: true })
+    } catch {
+      alert('Could not save the captured map. Please try again.')
+    }
+    setMapPicker(false)
   }
 
   const autoSplitPayment = () => {
@@ -443,7 +460,10 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
         {step === 4 && (
           <div>
             <h2 className="section-title">Field map</h2>
-            <p className="section-hint">Import a JPG/PNG site map. It appears as the second page with an engineering title block.</p>
+            <p className="section-hint">
+              Pull a satellite view from Google Maps (or upload your own image), then add callout boxes, arrows and
+              shapes. It appears as its own page with an engineering title block.
+            </p>
 
             <label className="chip" style={{ marginBottom: 16 }}>
               <input
@@ -455,18 +475,48 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
               Include the field-map page
             </label>
 
-            {p.map.imageUrl ? (
-              <div className="upload-thumb upload-thumb--wide">
-                <img src={p.map.imageUrl} alt="field map" />
-                <button className="icon-btn" onClick={() => mapPatch({ imageUrl: '' })} title="Remove">
-                  <Icon name="trash" size={14} />
+            <ErrorBoundary label="Map tools failed to load" onReset={() => setMapPicker(false)}>
+            {mapPicker ? (
+              <GoogleMapPicker
+                initialQuery={p.customer.location || p.customer.company}
+                onCapture={onMapCapture}
+                onCancel={() => setMapPicker(false)}
+              />
+            ) : p.map.imageUrl ? (
+              <>
+                <div className="map-thumb">
+                  <MapStage map={p.map} />
+                </div>
+                <p className="section-hint" style={{ marginTop: 8 }}>
+                  Add callout boxes, arrows and shapes directly on the large map in the live preview →
+                </p>
+                <div className="field-row" style={{ marginTop: 6 }}>
+                  {mapsEnabled && (
+                    <button className="btn btn--ghost btn--sm" onClick={() => setMapPicker(true)}>
+                      <Icon name="map" size={15} /> Recapture from Google
+                    </button>
+                  )}
+                  <button className="btn btn--ghost btn--sm" onClick={() => mapFileRef.current?.click()}>
+                    <Icon name="plus" size={15} /> Replace image
+                  </button>
+                  <button className="btn btn--ghost btn--sm" onClick={() => mapPatch({ imageUrl: '', annotations: [] })}>
+                    <Icon name="trash" size={15} /> Remove
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="map-source">
+                {mapsEnabled && (
+                  <button className="btn btn--primary btn--block" onClick={() => setMapPicker(true)}>
+                    <Icon name="map" size={15} /> Pick a view from Google Maps
+                  </button>
+                )}
+                <button className="btn btn--ghost btn--block" onClick={() => mapFileRef.current?.click()}>
+                  <Icon name="plus" size={15} /> Upload map image (JPG / PNG)
                 </button>
               </div>
-            ) : (
-              <button className="btn btn--ghost btn--block" onClick={() => mapFileRef.current?.click()}>
-                <Icon name="map" size={15} /> Upload map image (JPG / PNG)
-              </button>
             )}
+            </ErrorBoundary>
             <input ref={mapFileRef} type="file" accept="image/png,image/jpeg" onChange={onPickMapImage} style={{ display: 'none' }} />
 
             <Text label="Caption" maxLength={70} value={p.map.caption} onChange={(v) => mapPatch({ caption: v })} placeholder="e.g. Snake View Pipeline & Pump Replacement" />

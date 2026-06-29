@@ -14,6 +14,7 @@ import {
   investmentTotal,
 } from '../lib/pricing'
 import { tdhAtPump, psiAtPump, hpRequired } from '../lib/hydraulics'
+import { MapStage } from './MapStage'
 import { formatCurrency, formatDate, formatNumber, cls } from '../lib/util'
 
 const B = LAD_BRAND
@@ -55,7 +56,15 @@ function Foot({ p, page, total }: { p: Proposal; page: number; total: number }) 
   )
 }
 
-export function Presentation({ proposal, activeSection }: { proposal: Proposal; activeSection?: string }) {
+export function Presentation({
+  proposal,
+  activeSection,
+  mapEditable,
+}: {
+  proposal: Proposal
+  activeSection?: string
+  mapEditable?: boolean
+}) {
   const p = proposal
   /** className + anchor for a top-level sheet, flagging the one the builder step targets. */
   const sec = (key: string, base = 'sheet') => ({
@@ -158,7 +167,7 @@ export function Presentation({ proposal, activeSection }: { proposal: Proposal; 
       {showMap && (
         <section {...sec('map', 'sheet mapsheet')}>
           <div className="mapsheet__imgwrap">
-            <img className="mapsheet__img" src={p.map.imageUrl} alt={p.map.caption || 'Field map'} />
+            <MapStage map={p.map} editable={mapEditable} />
           </div>
           <div className="mapsheet__block">
             <img className="mapsheet__logo" src={B.logos.primary} alt={B.name} />

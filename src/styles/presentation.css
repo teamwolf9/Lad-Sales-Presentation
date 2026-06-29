@@ -19,9 +19,11 @@
 
 /* The sheet that corresponds to the builder step you're editing. */
 .sheet--active {
-  outline: 4px solid var(--green-500);
-  outline-offset: 6px;
-  box-shadow: 0 0 0 6px rgba(121, 192, 67, 0.18), var(--shadow-lg);
+  box-shadow:
+    0 0 0 3px rgba(121, 192, 67, 0.35),
+    0 0 22px 6px rgba(121, 192, 67, 0.45),
+    0 0 60px 14px rgba(121, 192, 67, 0.25),
+    var(--shadow-lg);
 }
 @media print {
   .sheet--active {
@@ -929,6 +931,68 @@
   margin-top: 0;
   padding: 12px 40px;
   background: #fff;
+}
+
+/* ---- Shared map image + annotation overlay (document, slides, exports) ---- */
+.map-fit {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.map-stage {
+  position: relative;
+  container-type: size;
+  background: var(--n-100);
+  overflow: hidden;
+}
+.map-stage__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
+}
+.map-anno-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.map-anno {
+  position: absolute;
+  box-sizing: border-box;
+}
+.map-anno--rect,
+.map-anno--ellipse {
+  border: 0.55cqw solid var(--accent, #e11d2a);
+  background: var(--fill, transparent);
+  border-radius: 0.6cqw;
+}
+.map-anno--ellipse {
+  border-radius: 50%;
+}
+.map-anno--text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--fill, #ffffff);
+  border: 0.4cqw solid var(--accent, #e11d2a);
+  border-radius: 0.5cqw;
+  padding: 0.7cqw 1cqw;
+  font-family: var(--font-display);
+  line-height: 1.2;
+  box-shadow: 0 0.3cqw 1cqw rgba(0, 0, 0, 0.18);
+}
+.map-anno__txt {
+  display: block;
+  width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  outline: none;
 }
 
 /* --------------------------- IMPROVEMENTS ANALYSIS --------------------------- */

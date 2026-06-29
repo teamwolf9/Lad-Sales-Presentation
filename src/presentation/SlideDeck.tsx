@@ -8,6 +8,7 @@ import type { Proposal, ProjectLine } from '../types'
 import { LAD_BRAND } from '../theme/brand'
 import { SERVICE_CATEGORIES, categoryLabel } from '../data/reference'
 import { LAD_STORES, LAD_HOURS } from '../data/stores'
+import { MapStage } from './MapStage'
 import {
   computeTotals,
   lineGross,
@@ -136,7 +137,7 @@ export function SlideDeck({ proposal }: { proposal: Proposal }) {
         <Slide>
           <div className="slide-map">
             <div className="slide-map__imgwrap">
-              <img src={p.map.imageUrl} alt={p.map.caption || 'Field map'} />
+              <MapStage map={p.map} />
             </div>
             <div className="slide-map__block">
               <img className="slide-map__logo" src={B.logos.primary} alt={B.name} />

@@ -19,6 +19,16 @@ export async function uploadImageFile(file: File, uid?: string | null, folder = 
   return getDownloadURL(r)
 }
 
+/** Upload a data-URL image (e.g. a Google Maps capture) and return its URL.
+ *  Falls back to the data URL itself in standalone mode. */
+export async function uploadDataUrl(dataUrl: string, uid?: string | null, folder = 'maps'): Promise<string> {
+  if (!firebaseEnabled || !storage || !uid) return dataUrl
+  const path = `users/${uid}/${folder}/${Date.now()}.png`
+  const r = ref(storage, path)
+  await uploadString(r, dataUrl, 'data_url')
+  return getDownloadURL(r)
+}
+
 /** Upload a generated PDF blob and return its download URL. */
 export async function uploadPdf(blob: Blob, uid: string, filename: string): Promise<string> {
   if (!firebaseEnabled || !storage) throw new Error('Storage is not configured')

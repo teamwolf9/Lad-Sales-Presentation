@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Builder } from '../builder/Builder'
 import { Presentation } from '../presentation/Presentation'
 import { SlideDeck } from '../presentation/SlideDeck'
@@ -6,6 +6,9 @@ import { useProposal } from '../state/proposal'
 import { useAuth } from '../lib/auth'
 import { Icon } from '../ui/Icon'
 import { cls } from '../lib/util'
+import { MapEditContext, type MapTool } from '../presentation/mapEdit'
+import { MapAnnotateToolbar } from '../presentation/MapAnnotateToolbar'
+import type { MapAnnotation } from '../types'
 
 /** Email-the-PDF dialog (To / CC / note → Postmark via the mail extension). */
 function EmailDialog({ onClose }: { onClose: () => void }) {
@@ -73,13 +76,28 @@ function EmailDialog({ onClose }: { onClose: () => void }) {
 type View = 'document' | 'slides'
 
 function Preview({ activeSection }: { activeSection: string }) {
-  const { proposal, readOnly } = useProposal()
+  const { proposal, setProposal, readOnly } = useProposal()
   const { enabled, profile } = useAuth()
   const [view, setView] = useState<View>('document')
   const [zoom, setZoom] = useState(0.62)
   const [exporting, setExporting] = useState(false)
   const [showEmail, setShowEmail] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Map annotation editing — happens on the big live document map.
+  const [tool, setTool] = useState<MapTool>('select')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const mapEditing =
+    !readOnly && view === 'document' && activeSection === 'map' && proposal.map.enabled && !!proposal.map.imageUrl
+
+  const setAnnotations = (next: MapAnnotation[]) =>
+    setProposal({ ...proposal, map: { ...proposal.map, annotations: next } })
+  const mapEditValue = useMemo(
+    () => ({ annotations: proposal.map.annotations, onChange: setAnnotations, tool, setTool, selectedId, setSelectedId, editingId, setEditingId }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [proposal, tool, selectedId, editingId],
+  )
 
   const canEmail = enabled && !readOnly && (profile?.role === 'admin' || profile?.role === 'creator')
 
@@ -121,6 +139,7 @@ function Preview({ activeSection }: { activeSection: string }) {
   }
 
   return (
+    <MapEditContext.Provider value={mapEditValue}>
     <main className="preview">
       <div className="preview__bar no-print">
         <div className="preview__title">
@@ -183,9 +202,11 @@ function Preview({ activeSection }: { activeSection: string }) {
 
       {showEmail && <EmailDialog onClose={() => setShowEmail(false)} />}
 
+      {mapEditing && <MapAnnotateToolbar />}
+
       <div className="preview__scroll" ref={scrollRef}>
         <div className={cls('zoomwrap', view === 'slides' && 'is-hidden-screen')} style={{ transform: `scale(${zoom})` }}>
-          <Presentation proposal={proposal} activeSection={activeSection} />
+          <Presentation proposal={proposal} activeSection={activeSection} mapEditable={mapEditing} />
         </div>
         {view === 'slides' && (
           <div className="zoomwrap no-print" style={{ transform: `scale(${zoom})` }}>
@@ -194,6 +215,7 @@ function Preview({ activeSection }: { activeSection: string }) {
         )}
       </div>
     </main>
+    </MapEditContext.Provider>
   )
 }
 

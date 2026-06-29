@@ -150,11 +150,52 @@ export interface Analysis {
   rows: AnalysisRow[]
 }
 
-/** The field-map page (imported JPG/PNG + engineering title block). */
+/** A drawn annotation laid over the map image. */
+export type MapAnnotationKind = 'text' | 'rect' | 'ellipse' | 'arrow' | 'line'
+export interface MapAnnotation {
+  id: string
+  kind: MapAnnotationKind
+  /** Geometry as a percentage (0–100) of the map image box.
+   *  text/rect/ellipse: x,y = top-left, w,h = size.
+   *  arrow: x,y = start point, x2,y2 = end point (w,h unused).
+   *  line: a multi-point pipe run — see `points` (x,y,w,h unused). */
+  x: number
+  y: number
+  w: number
+  h: number
+  x2?: number
+  y2?: number
+  /** line only — ordered vertices (percentages) of the pipe run. */
+  points?: { x: number; y: number }[]
+  /** arrow/line only — stroke thickness in viewBox units (1000-wide space). */
+  weight?: number
+  /** Text / line / border color (hex). */
+  color: string
+  /** Box background fill (hex, or 'transparent'). text defaults white,
+   *  rect/ellipse default transparent. */
+  fill?: string
+  /** text only — the label content (plain text; used as fallback / for search). */
+  text?: string
+  /** text only — rich HTML content (inline bold/underline per word). */
+  html?: string
+  /** text only — font size as a percentage of the map width (cqw). */
+  fontPct?: number
+  /** text only — bold weight (defaults true). */
+  bold?: boolean
+  /** text only — underline. */
+  underline?: boolean
+}
+
+/** The field-map page (Google Maps capture or imported JPG/PNG + title block). */
 export interface MapPage {
   enabled: boolean
-  /** Imported image as a data URL. */
+  /** Imported / captured image as a data URL. */
   imageUrl: string
+  /** Intrinsic aspect ratio (width / height) of the image, so the annotation
+   *  layer lines up exactly on screen and in exports. 0 = unknown. */
+  imageAspect: number
+  /** Overlaid text boxes, shapes and arrows. */
+  annotations: MapAnnotation[]
   caption: string
   scale: string
   designer: string

@@ -92,6 +92,20 @@ const P: Record<string, JSX.Element> = {
     </>
   ),
   check: <path d="m5 12 5 5 9-11" />,
+  text: (
+    <>
+      <path d="M4 6h16M4 6V5m16 1V5M12 6v13M9 19h6" />
+    </>
+  ),
+  square: <rect x="4" y="4" width="16" height="16" rx="1.5" />,
+  circle: <circle cx="12" cy="12" r="8.5" />,
+  arrow: (
+    <>
+      <path d="M4 20 20 4" />
+      <path d="M10 4h10v10" />
+    </>
+  ),
+  line: <path d="M4 20 20 4" />,
   reset: (
     <>
       <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />

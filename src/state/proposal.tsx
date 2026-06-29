@@ -43,6 +43,8 @@ export function createEmptyProposal(): Proposal {
     map: {
       enabled: false,
       imageUrl: '',
+      imageAspect: 0,
+      annotations: [],
       caption: '',
       scale: '1 inch : 600 feet',
       designer: '',
@@ -219,10 +221,14 @@ export function ProposalProvider({
     setLoaded(false)
     const unsub = watchProposal(proposalId, (rec) => {
       if (rec) {
-        const incoming = JSON.stringify(rec.data)
+        // Base the sync signature on the *merged* shape we actually hold, so
+        // opening a proposal (or our own save echoing back) never looks like a
+        // local edit — autosave then only fires on real add/delete/change.
+        const merged = { ...createEmptyProposal(), ...rec.data }
+        const incoming = JSON.stringify(merged)
         if (incoming !== lastSynced.current) {
           lastSynced.current = incoming
-          setProposal({ ...createEmptyProposal(), ...rec.data })
+          setProposal(merged)
         }
       }
       setLoaded(true)

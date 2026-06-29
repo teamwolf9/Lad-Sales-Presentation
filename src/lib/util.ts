@@ -35,3 +35,12 @@ export function cls(...parts: Array<string | false | null | undefined>): string 
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
+
+/** Escape plain text to safe HTML (newlines → <br>). Used to seed rich-text boxes. */
+export function escapeHtml(s: string): string {
+  return (s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+}
