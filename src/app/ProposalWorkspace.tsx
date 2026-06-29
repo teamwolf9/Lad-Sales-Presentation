@@ -3,17 +3,85 @@ import { Builder } from '../builder/Builder'
 import { Presentation } from '../presentation/Presentation'
 import { SlideDeck } from '../presentation/SlideDeck'
 import { useProposal } from '../state/proposal'
+import { useAuth } from '../lib/auth'
 import { Icon } from '../ui/Icon'
 import { cls } from '../lib/util'
+
+/** Email-the-PDF dialog (To / CC / note → Postmark via the mail extension). */
+function EmailDialog({ onClose }: { onClose: () => void }) {
+  const { proposal } = useProposal()
+  const { user, profile } = useAuth()
+  const [to, setTo] = useState(proposal.customer.email || '')
+  const [cc, setCc] = useState('')
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [done, setDone] = useState('')
+
+  const send = async () => {
+    setBusy(true)
+    setErr('')
+    try {
+      const { emailProposalPdf } = await import('../lib/email')
+      const res = await emailProposalPdf(
+        proposal,
+        { to, cc, note },
+        { uid: user!.uid, email: profile?.email || user?.email || '', name: profile?.displayName || profile?.email || '' },
+      )
+      setDone(`Sent to ${to}${res.adminsNotified ? ` · ${res.adminsNotified} admin${res.adminsNotified === 1 ? '' : 's'} notified` : ''}.`)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not send the email.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="modal no-print" onClick={() => !busy && onClose()}>
+      <div className="modal__card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal__head">
+          <h3>Email this proposal</h3>
+          <button className="modal__x" onClick={() => !busy && onClose()} aria-label="Close">✕</button>
+        </div>
+        {done ? (
+          <div>
+            <div className="invite-sent" style={{ marginBottom: 14 }}>{done}</div>
+            <button className="btn btn--primary btn--block" onClick={onClose}>Done</button>
+          </div>
+        ) : (
+          <div className="emailform">
+            <label>To</label>
+            <input type="email" placeholder="customer@example.com" value={to} onChange={(e) => setTo(e.target.value)} />
+            <label>CC <span className="emailform__opt">(optional, comma-separated)</span></label>
+            <input type="text" placeholder="manager@example.com, ops@example.com" value={cc} onChange={(e) => setCc(e.target.value)} />
+            <label>Message <span className="emailform__opt">(optional)</span></label>
+            <textarea rows={3} placeholder="A short note to include in the email…" value={note} onChange={(e) => setNote(e.target.value)} />
+            <p className="share__hint" style={{ marginTop: 4 }}>
+              A PDF of this proposal is attached. All admins are notified that it was sent.
+            </p>
+            {err && <div className="share__err">{err}</div>}
+            <button className="btn btn--primary btn--block" disabled={busy || !to} onClick={send}>
+              <Icon name="mail" size={15} /> {busy ? 'Building & sending…' : 'Send PDF'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 type View = 'document' | 'slides'
 
 function Preview({ activeSection }: { activeSection: string }) {
-  const { proposal } = useProposal()
+  const { proposal, readOnly } = useProposal()
+  const { enabled, profile } = useAuth()
   const [view, setView] = useState<View>('document')
   const [zoom, setZoom] = useState(0.62)
   const [exporting, setExporting] = useState(false)
+  const [showEmail, setShowEmail] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const canEmail = enabled && !readOnly && (profile?.role === 'admin' || profile?.role === 'creator')
 
   // Signature of which optional sections are currently visible. Changes only when
   // a page is toggled/added (e.g. a map is uploaded) — NOT on ordinary typing —
@@ -99,12 +167,21 @@ function Preview({ activeSection }: { activeSection: string }) {
               <Icon name="slides" size={15} /> {exporting ? 'Building…' : 'Export PowerPoint'}
             </button>
           ) : (
-            <button className="btn btn--primary btn--sm" onClick={() => window.print()}>
-              <Icon name="print" size={15} /> Print / Save PDF
-            </button>
+            <>
+              {canEmail && (
+                <button className="btn btn--ghost btn--sm" onClick={() => setShowEmail(true)}>
+                  <Icon name="mail" size={15} /> Email PDF
+                </button>
+              )}
+              <button className="btn btn--primary btn--sm" onClick={() => window.print()}>
+                <Icon name="print" size={15} /> Print / Save PDF
+              </button>
+            </>
           )}
         </div>
       </div>
+
+      {showEmail && <EmailDialog onClose={() => setShowEmail(false)} />}
 
       <div className="preview__scroll" ref={scrollRef}>
         <div className={cls('zoomwrap', view === 'slides' && 'is-hidden-screen')} style={{ transform: `scale(${zoom})` }}>

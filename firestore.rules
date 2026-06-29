@@ -29,10 +29,11 @@ service cloud.firestore {
     }
 
     // ---- Outgoing mail queue (Trigger Email extension) ----
-    // Admins enqueue invite emails. The extension processes docs via the Admin
-    // SDK, which bypasses these rules, so clients only ever create.
+    // Admins enqueue invite emails; creators/admins email proposal PDFs and the
+    // admin notifications that go with them. The extension processes docs via the
+    // Admin SDK, which bypasses these rules, so clients only ever create.
     match /mail/{id} {
-      allow create: if isAdmin();
+      allow create: if isCreator();
       allow read, update, delete: if false;
     }
 

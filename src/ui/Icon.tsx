@@ -85,6 +85,12 @@ const P: Record<string, JSX.Element> = {
       <rect x="7" y="14" width="10" height="7" rx="1" />
     </>
   ),
+  mail: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </>
+  ),
   check: <path d="m5 12 5 5 9-11" />,
   reset: (
     <>

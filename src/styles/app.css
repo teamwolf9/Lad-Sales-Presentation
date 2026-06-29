@@ -283,15 +283,50 @@
 }
 .modal__card input,
 .modal__card select,
+.modal__card textarea,
 .utable__role {
   color: var(--ink);
   background: #fff;
   border: 1px solid var(--border);
 }
 .modal__card input:focus,
-.modal__card select:focus {
+.modal__card select:focus,
+.modal__card textarea:focus {
   border-color: var(--green-500);
   box-shadow: var(--focus-ring);
+}
+
+/* Email-the-PDF dialog */
+.emailform {
+  display: flex;
+  flex-direction: column;
+}
+.emailform label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 10px 0 5px;
+}
+.emailform label:first-child {
+  margin-top: 0;
+}
+.emailform .emailform__opt {
+  font-weight: 400;
+  color: var(--text-faint);
+}
+.emailform input,
+.emailform textarea {
+  width: 100%;
+  border-radius: var(--radius-md);
+  padding: 9px 11px;
+  font: inherit;
+}
+.emailform textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+.emailform .btn--block {
+  margin-top: 16px;
 }
 .share__invite {
   display: grid;
