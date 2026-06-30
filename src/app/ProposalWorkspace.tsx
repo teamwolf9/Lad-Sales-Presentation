@@ -94,7 +94,7 @@ function Preview({ activeSection }: { activeSection: string }) {
   const setAnnotations = (next: MapAnnotation[]) =>
     setProposal({ ...proposal, map: { ...proposal.map, annotations: next } })
   const mapEditValue = useMemo(
-    () => ({ annotations: proposal.map.annotations, onChange: setAnnotations, tool, setTool, selectedId, setSelectedId, editingId, setEditingId }),
+    () => ({ annotations: proposal.map.annotations ?? [], onChange: setAnnotations, tool, setTool, selectedId, setSelectedId, editingId, setEditingId }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [proposal, tool, selectedId, editingId],
   )

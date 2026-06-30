@@ -126,36 +126,41 @@ interface ProposalCtx {
 
 const Ctx = createContext<ProposalCtx | null>(null)
 
-function load(): Proposal {
+/**
+ * Merge a stored/partial proposal onto fresh defaults. Top-level shallow merge,
+ * then deep-merge nested objects so proposals saved before newer fields existed
+ * (e.g. map.annotations) still get sensible defaults — preventing crashes when
+ * the editor reads those fields.
+ */
+function hydrate(saved: Partial<Proposal>): Proposal {
   const base = createEmptyProposal()
+  return {
+    ...base,
+    ...saved,
+    meta: { ...base.meta, ...saved.meta },
+    customer: { ...base.customer, ...saved.customer },
+    preparedBy: { ...base.preparedBy, ...saved.preparedBy },
+    map: { ...base.map, ...saved.map },
+    analysis: { ...base.analysis, ...saved.analysis },
+    hydraulics: {
+      ...base.hydraulics,
+      ...saved.hydraulics,
+      worksheet: { ...base.hydraulics.worksheet, ...saved.hydraulics?.worksheet },
+    },
+    design: { ...base.design, ...saved.design },
+    payment: { ...base.payment, ...saved.payment },
+    settings: { ...base.settings, ...saved.settings },
+  }
+}
+
+function load(): Proposal {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const saved = JSON.parse(raw) as Partial<Proposal>
-      // Top-level shallow merge, then deep-merge nested objects so drafts saved
-      // before newer fields existed still get sensible defaults for them.
-      return {
-        ...base,
-        ...saved,
-        meta: { ...base.meta, ...saved.meta },
-        customer: { ...base.customer, ...saved.customer },
-        preparedBy: { ...base.preparedBy, ...saved.preparedBy },
-        map: { ...base.map, ...saved.map },
-        analysis: { ...base.analysis, ...saved.analysis },
-        hydraulics: {
-          ...base.hydraulics,
-          ...saved.hydraulics,
-          worksheet: { ...base.hydraulics.worksheet, ...saved.hydraulics?.worksheet },
-        },
-        design: { ...base.design, ...saved.design },
-        payment: { ...base.payment, ...saved.payment },
-        settings: { ...base.settings, ...saved.settings },
-      }
-    }
+    if (raw) return hydrate(JSON.parse(raw) as Partial<Proposal>)
   } catch {
     /* ignore corrupt drafts */
   }
-  return base
+  return createEmptyProposal()
 }
 
 /**
@@ -224,7 +229,8 @@ export function ProposalProvider({
         // Base the sync signature on the *merged* shape we actually hold, so
         // opening a proposal (or our own save echoing back) never looks like a
         // local edit — autosave then only fires on real add/delete/change.
-        const merged = { ...createEmptyProposal(), ...rec.data }
+        // Deep-merge (hydrate) so older docs missing newer fields don't crash.
+        const merged = hydrate(rec.data)
         const incoming = JSON.stringify(merged)
         if (incoming !== lastSynced.current) {
           lastSynced.current = incoming

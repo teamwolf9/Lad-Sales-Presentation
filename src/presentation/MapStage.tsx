@@ -152,7 +152,7 @@ export function MapStage({ map, className, editable }: { map: MapPage; className
         {interactive ? (
           <MapInteractiveLayer aspect={aspect} />
         ) : (
-          <AnnotationLayer annotations={map.annotations} aspect={aspect} />
+          <AnnotationLayer annotations={map.annotations ?? []} aspect={aspect} />
         )}
       </div>
     </div>
