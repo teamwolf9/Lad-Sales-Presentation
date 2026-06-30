@@ -10,9 +10,16 @@ export default defineConfig({
     port: 5174,
     open: true,
     watch: {
-      // Don't watch the raw design-system drop or the source zip — they're
-      // large/locked and crash the file watcher (EBUSY) on Windows.
-      ignored: ['**/design-system/**', '**/*.zip'],
+      // Don't watch the raw design-system drop, the source zip, or the
+      // Playwright browser profile — they're large/locked and crash the file
+      // watcher (EBUSY) on Windows.
+      ignored: [
+        '**/design-system/**',
+        '**/*.zip',
+        // Regex matches either path separator — globs miss the Windows
+        // backslash form of this locked browser-profile dir.
+        /[\\/]\.playwright-profile[\\/]/,
+      ],
     },
   },
 })
