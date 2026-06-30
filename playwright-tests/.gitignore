@@ -1,0 +1,13 @@
+# Screenshots are big and regeneratable from the flow. Gitignored by default.
+# If a specific test folder needs its screenshots committed (e.g. a reference
+# set for visual regression, or a finalized guide getting handed off), opt in
+# by adding a `!<test-slug>/screenshots/` line below.
+**/screenshots/
+
+# Allow the smoke screenshots so a fresh clone has a reference of what a
+# working first run looks like.
+!_smoke/screenshots/
+
+# Local PDF exports (auto-generated from .md by Markdown PDF VSCode extension
+# or similar). The .md is the source of truth; PDFs are per-machine.
+**/*.pdf

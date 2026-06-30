@@ -26,3 +26,12 @@ extensions/*.env
 
 # Raw employee headshot originals — slugified copies live in public/employees
 /Employees/
+
+# Playwright MCP — persisted Chromium profile (auth cookies, localStorage).
+# Per-developer; never commit. See claude-browser-automation-setup.
+.playwright-profile/
+
+# Playwright MCP default screenshot drop — we organize captures under
+# playwright-tests/<test-slug>/screenshots/ instead. Anything that lands here
+# is unsorted/stray; ignore the whole dir.
+.playwright-mcp/

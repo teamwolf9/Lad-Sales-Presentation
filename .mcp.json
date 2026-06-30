@@ -1,0 +1,14 @@
+{
+  "//": "Project-level MCP server registrations for Claude Code. Committed to the repo so every contributor on this project gets the same tools.",
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--user-data-dir",
+        "./.playwright-profile"
+      ]
+    }
+  }
+}
