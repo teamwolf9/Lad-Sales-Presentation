@@ -4,7 +4,7 @@
  * center / zoom / type as a data URL for the Map page.
  */
 import { useEffect, useRef, useState } from 'react'
-import { loadGoogleMaps, buildStaticMapUrl, imageUrlToDataUrl, STATIC_ASPECT, mapScaleLabel } from '../lib/maps'
+import { loadGoogleMaps, buildStaticMapUrl, imageUrlToDataUrl, mapScaleLabel } from '../lib/maps'
 
 export function GoogleMapPicker({
   initialQuery,
@@ -101,10 +101,23 @@ export function GoogleMapPicker({
     try {
       const c = map.getCenter()
       const lat = c.lat()
-      const zoom = map.getZoom() || 15
-      const url = buildStaticMapUrl({ lat, lng: c.lng(), zoom, mapType: map.getMapTypeId() || 'hybrid' })
+      const zf = map.getZoom() || 15
+      // Capture the SAME ground area the user framed: render the still at the
+      // viewport's pixel size, scaled by 2^(fracZoom) so an integer static zoom
+      // still covers exactly what's on screen (no wider/older shot).
+      const el = mapDivRef.current
+      const cw = el?.clientWidth || 580
+      const ch = el?.clientHeight || 640
+      const zi = Math.round(zf)
+      const factor = Math.pow(2, zf - zi)
+      let w = cw * factor
+      let h = ch * factor
+      const cap = Math.min(1, 640 / w, 640 / h)
+      w = Math.round(w * cap)
+      h = Math.round(h * cap)
+      const url = buildStaticMapUrl({ lat, lng: c.lng(), zoom: zi, mapType: map.getMapTypeId() || 'satellite', w, h })
       const dataUrl = await imageUrlToDataUrl(url)
-      onCapture(dataUrl, STATIC_ASPECT, mapScaleLabel(lat, zoom))
+      onCapture(dataUrl, w / h, mapScaleLabel(lat, zi, w))
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not capture the map view.')
     } finally {

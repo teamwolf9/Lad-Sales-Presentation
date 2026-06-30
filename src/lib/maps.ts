@@ -41,6 +41,9 @@ export interface StaticMapView {
   zoom: number
   /** 'roadmap' | 'satellite' | 'hybrid' | 'terrain' */
   mapType: string
+  /** Optional pixel size (logical, before ×2 retina). Defaults to STATIC_W/H. */
+  w?: number
+  h?: number
 }
 
 /** Pixel size of the captured still (before the ×2 retina scale).
@@ -66,10 +69,10 @@ const niceRound = (n: number): number => {
   return Math.max(5, Math.round(n / 5) * 5)
 }
 
-/** A "1 inch : N feet" scale label for a captured view (zoom is rounded to match
- *  the static image). */
-export function mapScaleLabel(lat: number, zoom: number): string {
-  const groundFt = STATIC_W * metersPerPixel(lat, Math.round(zoom)) * 3.280839895
+/** A "1 inch : N feet" scale label for a captured view, given the still's pixel
+ *  width and the (integer) zoom it was rendered at. */
+export function mapScaleLabel(lat: number, zoom: number, widthPx = STATIC_W): string {
+  const groundFt = widthPx * metersPerPixel(lat, Math.round(zoom)) * 3.280839895
   return `1 inch : ${niceRound(groundFt / PRINT_MAP_WIDTH_IN).toLocaleString()} feet`
 }
 
@@ -79,7 +82,7 @@ export function buildStaticMapUrl(v: StaticMapView): string {
   const params = new URLSearchParams({
     center: `${v.lat},${v.lng}`,
     zoom: String(Math.round(v.zoom)),
-    size: `${STATIC_W}x${STATIC_H}`,
+    size: `${Math.min(640, Math.round(v.w || STATIC_W))}x${Math.min(640, Math.round(v.h || STATIC_H))}`,
     scale: '2',
     maptype: v.mapType === 'roadmap' ? 'roadmap' : v.mapType,
     format: 'png',
