@@ -167,17 +167,15 @@ export function GoogleMapPicker({
       const cap = Math.min(1, 640 / w, 640 / h)
       w = Math.round(w * cap)
       h = Math.round(h * cap)
-      const overlays = kml ? kmlToStaticOverlays(kml) : { paths: [], markers: [] }
-      const url = buildStaticMapUrl({
-        lat,
-        lng: c.lng(),
-        zoom: zi,
-        mapType: map.getMapTypeId() || 'satellite',
-        w,
-        h,
-        paths: overlays.paths,
-        markers: overlays.markers,
-      })
+      const base = { lat, lng: c.lng(), zoom: zi, mapType: map.getMapTypeId() || 'satellite', w, h }
+      // Bake KML overlays in; if the URL is too long for the Static Maps API,
+      // progressively down-sample the paths until it fits.
+      const buildUrl = (maxPts: number) => {
+        const o = kml ? kmlToStaticOverlays(kml, maxPts) : { paths: [], markers: [] }
+        return buildStaticMapUrl({ ...base, paths: o.paths, markers: o.markers })
+      }
+      let url = buildUrl(350)
+      for (let mp = 350; url.length > 7800 && mp > 25; mp = Math.floor(mp / 2)) url = buildUrl(mp)
       const dataUrl = await imageUrlToDataUrl(url)
       onCapture(dataUrl, w / h, mapScaleLabel(lat, zi, w))
     } catch (e) {

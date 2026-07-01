@@ -155,10 +155,15 @@ export function encodePolyline(coords: [number, number][]): string {
   return out
 }
 
-/** Turn parsed KML into Static-Maps overlays (encoded paths + point markers). */
-export function kmlToStaticOverlays(f: KmlFeatures): { paths: StaticPath[]; markers: { lat: number; lng: number }[] } {
+/** Turn parsed KML into Static-Maps overlays (encoded paths + point markers).
+ *  `maxPtsPerPath` down-samples dense paths to keep the request URL under the
+ *  ~8k Static-Maps limit — the caller lowers it and retries if needed. */
+export function kmlToStaticOverlays(
+  f: KmlFeatures,
+  maxPtsPerPath = 350,
+): { paths: StaticPath[]; markers: { lat: number; lng: number }[] } {
   const paths = f.paths.map((p) => ({
-    enc: encodePolyline(sample(p.coords)),
+    enc: encodePolyline(sample(p.coords, maxPtsPerPath)),
     color: p.closed ? '0xff3b30ff' : '0xffdd00ff', // polygons red, lines yellow
     weight: p.closed ? 3 : 4,
     fill: p.closed ? '0xff3b3022' : undefined,
@@ -234,7 +239,8 @@ export function buildStaticMapUrl(v: StaticMapView): string {
     parts.push(`enc:${p.enc}`)
     params.append('path', parts.join('|'))
   }
-  for (const m of v.markers || []) params.append('markers', `size:tiny|color:0xff3b30ff|${m.lat},${m.lng}`)
+  // NB: marker color is 24-bit only (no alpha) — a 32-bit value 400s the request.
+  for (const m of v.markers || []) params.append('markers', `size:tiny|color:0xff3b30|${m.lat},${m.lng}`)
   return `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`
 }
 
