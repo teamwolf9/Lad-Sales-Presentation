@@ -10,10 +10,11 @@ import {
   imageUrlToDataUrl,
   mapScaleLabel,
   parseKml,
-  kmlToStaticOverlays,
+  kmlToAnnotations,
   kmlToGeoJson,
   type KmlFeatures,
 } from '../lib/maps'
+import type { MapAnnotation } from '../types'
 
 export function GoogleMapPicker({
   initialQuery,
@@ -21,7 +22,7 @@ export function GoogleMapPicker({
   onCancel,
 }: {
   initialQuery?: string
-  onCapture: (dataUrl: string, aspect: number, scale: string) => void
+  onCapture: (dataUrl: string, aspect: number, scale: string, annotations?: MapAnnotation[]) => void
   onCancel: () => void
 }) {
   const mapDivRef = useRef<HTMLDivElement>(null)
@@ -167,17 +168,12 @@ export function GoogleMapPicker({
       const cap = Math.min(1, 640 / w, 640 / h)
       w = Math.round(w * cap)
       h = Math.round(h * cap)
-      const base = { lat, lng: c.lng(), zoom: zi, mapType: map.getMapTypeId() || 'satellite', w, h }
-      // Bake KML overlays in; if the URL is too long for the Static Maps API,
-      // progressively down-sample the paths until it fits.
-      const buildUrl = (maxPts: number) => {
-        const o = kml ? kmlToStaticOverlays(kml, maxPts) : { paths: [], markers: [] }
-        return buildStaticMapUrl({ ...base, paths: o.paths, markers: o.markers })
-      }
-      let url = buildUrl(350)
-      for (let mp = 350; url.length > 7800 && mp > 25; mp = Math.floor(mp / 2)) url = buildUrl(mp)
+      // Capture a clean satellite still. Any imported KML becomes EDITABLE map
+      // annotations projected onto this exact view (not baked into the image).
+      const url = buildStaticMapUrl({ lat, lng: c.lng(), zoom: zi, mapType: map.getMapTypeId() || 'satellite', w, h })
       const dataUrl = await imageUrlToDataUrl(url)
-      onCapture(dataUrl, w / h, mapScaleLabel(lat, zi, w))
+      const annotations = kml ? kmlToAnnotations(kml, { lat, lng: c.lng(), zoom: zi, w, h }) : undefined
+      onCapture(dataUrl, w / h, mapScaleLabel(lat, zi, w), annotations)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not capture the map view.')
     } finally {

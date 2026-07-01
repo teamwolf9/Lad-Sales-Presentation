@@ -161,10 +161,16 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
     e.target.value = ''
   }
 
-  const onMapCapture = async (dataUrl: string, aspect: number, scale: string) => {
+  const onMapCapture = async (
+    dataUrl: string,
+    aspect: number,
+    scale: string,
+    annotations?: import('../types').MapAnnotation[],
+  ) => {
     try {
       const url = await uploadDataUrl(dataUrl, user?.uid, 'maps')
-      mapPatch({ imageUrl: url, imageAspect: aspect, scale, enabled: true })
+      // KML import returns editable annotations projected onto this capture.
+      mapPatch({ imageUrl: url, imageAspect: aspect, scale, enabled: true, ...(annotations ? { annotations } : {}) })
     } catch {
       alert('Could not save the captured map. Please try again.')
     }

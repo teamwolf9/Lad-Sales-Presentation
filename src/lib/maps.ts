@@ -6,6 +6,9 @@
  * center/zoom/type and converts it to a data URL, so the captured map embeds
  * cleanly into the PDF / PowerPoint exports (no cross-origin taint).
  */
+import type { MapAnnotation } from '../types'
+import { uid } from './util'
+
 export const MAPS_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim()
 export const mapsEnabled = !!MAPS_KEY
 
@@ -169,6 +172,65 @@ export function kmlToStaticOverlays(
     fill: p.closed ? '0xff3b3022' : undefined,
   }))
   return { paths, markers: f.points.slice(0, 20).map(({ lat, lng }) => ({ lat, lng })) }
+}
+
+/** Web-Mercator world pixel (256-tile space, zoom 0) for a lat/lng. */
+function project(lat: number, lng: number): { x: number; y: number } {
+  const siny = Math.min(Math.max(Math.sin((lat * Math.PI) / 180), -0.9999), 0.9999)
+  return {
+    x: 256 * (0.5 + lng / 360),
+    y: 256 * (0.5 - Math.log((1 + siny) / (1 - siny)) / (4 * Math.PI)),
+  }
+}
+
+export interface CaptureView { lat: number; lng: number; zoom: number; w: number; h: number }
+
+/**
+ * Project parsed KML into EDITABLE map annotations positioned as percentages of
+ * the captured still — lines/polygons become `line` annotations, points become
+ * `text` markers. `view` is the exact center/zoom/pixel-size that was captured.
+ */
+export function kmlToAnnotations(f: KmlFeatures, view: CaptureView): MapAnnotation[] {
+  const scale = Math.pow(2, view.zoom)
+  const c = project(view.lat, view.lng)
+  const cwx = c.x * scale
+  const cwy = c.y * scale
+  const toPct = (lat: number, lng: number) => {
+    const pr = project(lat, lng)
+    const px = pr.x * scale - cwx + view.w / 2
+    const py = pr.y * scale - cwy + view.h / 2
+    return { x: +((px / view.w) * 100).toFixed(2), y: +((py / view.h) * 100).toFixed(2) }
+  }
+  const out: MapAnnotation[] = []
+  for (const p of f.paths) {
+    const points = sample(p.coords, 150).map(([lat, lng]) => toPct(lat, lng))
+    if (p.closed && points.length) points.push({ ...points[0] }) // close the ring
+    out.push({
+      id: uid('an'),
+      kind: 'line',
+      x: 0, y: 0, w: 0, h: 0,
+      color: p.closed ? '#e11d2a' : '#f59e0b', // polygons red, lines amber
+      weight: 8,
+      points,
+    })
+  }
+  for (const pt of f.points) {
+    const { x, y } = toPct(pt.lat, pt.lng)
+    const w = 24, h = 9
+    out.push({
+      id: uid('an'),
+      kind: 'text',
+      x: +(x - w / 2).toFixed(2),
+      y: +(y - h / 2).toFixed(2),
+      w, h,
+      color: '#ffffff',
+      fill: '#e11d2a',
+      text: pt.name || '•',
+      fontPct: 3.2,
+      bold: true,
+    })
+  }
+  return out
 }
 
 /** Turn parsed KML into GeoJSON for the interactive map's Data layer preview. */
