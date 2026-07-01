@@ -586,8 +586,34 @@
 .gmap__actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
   margin-top: 10px;
+}
+.gmap__kml {
+  margin-right: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--green-700);
+  background: var(--green-50);
+  border: 1px solid var(--green-500);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+}
+.gmap__kmlx {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+}
+.gmap__kmlx:hover {
+  color: var(--red-500);
 }
 .share__invite {
   display: grid;

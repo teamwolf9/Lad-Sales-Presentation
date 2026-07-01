@@ -4,7 +4,16 @@
  * center / zoom / type as a data URL for the Map page.
  */
 import { useEffect, useRef, useState } from 'react'
-import { loadGoogleMaps, buildStaticMapUrl, imageUrlToDataUrl, mapScaleLabel } from '../lib/maps'
+import {
+  loadGoogleMaps,
+  buildStaticMapUrl,
+  imageUrlToDataUrl,
+  mapScaleLabel,
+  parseKml,
+  kmlToStaticOverlays,
+  kmlToGeoJson,
+  type KmlFeatures,
+} from '../lib/maps'
 
 export function GoogleMapPicker({
   initialQuery,
@@ -17,10 +26,12 @@ export function GoogleMapPicker({
 }) {
   const mapDivRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const kmlInputRef = useRef<HTMLInputElement>(null)
   const mapRef = useRef<any>(null)
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [kml, setKml] = useState<KmlFeatures | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -93,6 +104,47 @@ export function GoogleMapPicker({
     }
   }, [initialQuery])
 
+  // Draw an imported KML on the interactive map and frame it.
+  const drawKml = (features: KmlFeatures) => {
+    const map = mapRef.current
+    const google = (window as any).google
+    if (!map || !google) return
+    map.data.forEach((f: any) => map.data.remove(f))
+    map.data.addGeoJson(kmlToGeoJson(features))
+    map.data.setStyle({
+      strokeColor: '#ffdd00',
+      strokeWeight: 3,
+      fillColor: '#ff3b30',
+      fillOpacity: 0.12,
+      clickable: false,
+    })
+    if (features.bounds) {
+      const b = features.bounds
+      map.fitBounds(new google.maps.LatLngBounds({ lat: b.s, lng: b.w }, { lat: b.n, lng: b.e }))
+    }
+  }
+
+  const onPickKml = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setErr('')
+    try {
+      if (/\.kmz$/i.test(file.name)) throw new Error('KMZ isn’t supported — unzip it and import the .kml inside.')
+      const features = parseKml(await file.text())
+      setKml(features)
+      drawKml(features)
+    } catch (err) {
+      setErr(err instanceof Error ? err.message : 'Could not read that KML file.')
+    }
+  }
+
+  const clearKml = () => {
+    const map = mapRef.current
+    if (map) map.data.forEach((f: any) => map.data.remove(f))
+    setKml(null)
+  }
+
   const capture = async () => {
     const map = mapRef.current
     if (!map) return
@@ -115,7 +167,17 @@ export function GoogleMapPicker({
       const cap = Math.min(1, 640 / w, 640 / h)
       w = Math.round(w * cap)
       h = Math.round(h * cap)
-      const url = buildStaticMapUrl({ lat, lng: c.lng(), zoom: zi, mapType: map.getMapTypeId() || 'satellite', w, h })
+      const overlays = kml ? kmlToStaticOverlays(kml) : { paths: [], markers: [] }
+      const url = buildStaticMapUrl({
+        lat,
+        lng: c.lng(),
+        zoom: zi,
+        mapType: map.getMapTypeId() || 'satellite',
+        w,
+        h,
+        paths: overlays.paths,
+        markers: overlays.markers,
+      })
       const dataUrl = await imageUrlToDataUrl(url)
       onCapture(dataUrl, w / h, mapScaleLabel(lat, zi, w))
     } catch (e) {
@@ -135,10 +197,30 @@ export function GoogleMapPicker({
         <div className="gmap__map" ref={mapDivRef} />
         {!ready && !err && <div className="gmap__loading">Loading map…</div>}
       </div>
+      <input
+        ref={kmlInputRef}
+        type="file"
+        accept=".kml,application/vnd.google-earth.kml+xml,text/xml"
+        onChange={onPickKml}
+        style={{ display: 'none' }}
+      />
       <div className="gmap__actions">
         <button className="btn btn--ghost btn--sm" type="button" onClick={onCancel}>
           Cancel
         </button>
+        {kml ? (
+          <span className="gmap__kml">
+            KML: {kml.paths.length} shape{kml.paths.length === 1 ? '' : 's'}
+            {kml.points.length ? ` · ${kml.points.length} pt` : ''}
+            <button type="button" className="gmap__kmlx" onClick={clearKml} title="Remove KML">
+              ✕
+            </button>
+          </span>
+        ) : (
+          <button className="btn btn--ghost btn--sm" type="button" onClick={() => kmlInputRef.current?.click()} disabled={!ready}>
+            Import KML
+          </button>
+        )}
         <button className="btn btn--primary btn--sm" type="button" onClick={capture} disabled={!ready || busy}>
           {busy ? 'Capturing…' : 'Use this view'}
         </button>

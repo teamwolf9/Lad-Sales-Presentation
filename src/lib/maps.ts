@@ -35,6 +35,17 @@ export function loadGoogleMaps(): Promise<any> {
   return loader
 }
 
+/** An encoded-polyline overlay drawn onto the static map. */
+export interface StaticPath {
+  /** Google-encoded polyline of [lat,lng] points. */
+  enc: string
+  /** Stroke color as 0xRRGGBBAA. */
+  color: string
+  weight: number
+  /** Optional polygon fill (0xRRGGBBAA); presence implies a closed shape. */
+  fill?: string
+}
+
 export interface StaticMapView {
   lat: number
   lng: number
@@ -44,6 +55,131 @@ export interface StaticMapView {
   /** Optional pixel size (logical, before ×2 retina). Defaults to STATIC_W/H. */
   w?: number
   h?: number
+  /** Optional KML-derived line/polygon overlays baked into the still. */
+  paths?: StaticPath[]
+  /** Optional point markers (lat,lng) baked into the still. */
+  markers?: { lat: number; lng: number }[]
+}
+
+/* --------------------------------- KML --------------------------------- */
+
+export interface KmlFeatures {
+  /** Line + polygon rings as [lat,lng][] with a closed flag (polygon). */
+  paths: { coords: [number, number][]; closed: boolean }[]
+  points: { lat: number; lng: number; name?: string }[]
+  /** Geographic bounds of everything, or null if empty. */
+  bounds: { n: number; s: number; e: number; w: number } | null
+}
+
+const nsEls = (root: Element | Document, name: string) =>
+  Array.from(root.getElementsByTagNameNS('*', name))
+
+/** Parse a KML `<coordinates>` string ("lng,lat,alt lng,lat …") → [lat,lng][]. */
+function parseCoords(text: string | null | undefined): [number, number][] {
+  if (!text) return []
+  const out: [number, number][] = []
+  for (const tuple of text.trim().split(/\s+/)) {
+    const [lng, lat] = tuple.split(',').map(Number)
+    if (isFinite(lat) && isFinite(lng)) out.push([lat, lng])
+  }
+  return out
+}
+
+/** Parse a KML document string into line/polygon/point features + bounds. */
+export function parseKml(text: string): KmlFeatures {
+  const doc = new DOMParser().parseFromString(text, 'application/xml')
+  if (doc.querySelector('parsererror')) throw new Error('That file isn’t valid KML/XML.')
+
+  const paths: KmlFeatures['paths'] = []
+  const points: KmlFeatures['points'] = []
+
+  for (const ls of nsEls(doc, 'LineString')) {
+    const coords = parseCoords(nsEls(ls, 'coordinates')[0]?.textContent)
+    if (coords.length >= 2) paths.push({ coords, closed: false })
+  }
+  for (const poly of nsEls(doc, 'Polygon')) {
+    const ring = nsEls(poly, 'LinearRing')[0]
+    const coords = parseCoords(nsEls(ring, 'coordinates')[0]?.textContent)
+    if (coords.length >= 3) paths.push({ coords, closed: true })
+  }
+  for (const pt of nsEls(doc, 'Point')) {
+    const [c] = parseCoords(nsEls(pt, 'coordinates')[0]?.textContent)
+    if (!c) continue
+    // Nearest ancestor Placemark's <name>, if any.
+    let node: Element | null = pt
+    let name: string | undefined
+    while (node && node.localName !== 'Placemark') node = node.parentElement
+    if (node) name = nsEls(node, 'name')[0]?.textContent?.trim() || undefined
+    points.push({ lat: c[0], lng: c[1], name })
+  }
+
+  if (!paths.length && !points.length) throw new Error('No map shapes found in that KML.')
+
+  let n = -90, s = 90, e = -180, w = 180
+  const bump = (lat: number, lng: number) => {
+    n = Math.max(n, lat); s = Math.min(s, lat); e = Math.max(e, lng); w = Math.min(w, lng)
+  }
+  paths.forEach((p) => p.coords.forEach(([lat, lng]) => bump(lat, lng)))
+  points.forEach((p) => bump(p.lat, p.lng))
+
+  return { paths, points, bounds: { n, s, e, w } }
+}
+
+/** Down-sample a coordinate list so a single path never blows the URL budget. */
+function sample(coords: [number, number][], max = 350): [number, number][] {
+  if (coords.length <= max) return coords
+  const step = Math.ceil(coords.length / max)
+  const out = coords.filter((_, i) => i % step === 0)
+  const last = coords[coords.length - 1]
+  if (out[out.length - 1] !== last) out.push(last)
+  return out
+}
+
+/** Encode [lat,lng][] as a Google polyline (compact for Static Maps `enc:`). */
+export function encodePolyline(coords: [number, number][]): string {
+  const enc = (v: number) => {
+    let sgn = v < 0 ? ~(v << 1) : v << 1
+    let out = ''
+    while (sgn >= 0x20) {
+      out += String.fromCharCode((0x20 | (sgn & 0x1f)) + 63)
+      sgn >>= 5
+    }
+    return out + String.fromCharCode(sgn + 63)
+  }
+  let lastLat = 0, lastLng = 0, out = ''
+  for (const [lat, lng] of coords) {
+    const la = Math.round(lat * 1e5), ln = Math.round(lng * 1e5)
+    out += enc(la - lastLat) + enc(ln - lastLng)
+    lastLat = la; lastLng = ln
+  }
+  return out
+}
+
+/** Turn parsed KML into Static-Maps overlays (encoded paths + point markers). */
+export function kmlToStaticOverlays(f: KmlFeatures): { paths: StaticPath[]; markers: { lat: number; lng: number }[] } {
+  const paths = f.paths.map((p) => ({
+    enc: encodePolyline(sample(p.coords)),
+    color: p.closed ? '0xff3b30ff' : '0xffdd00ff', // polygons red, lines yellow
+    weight: p.closed ? 3 : 4,
+    fill: p.closed ? '0xff3b3022' : undefined,
+  }))
+  return { paths, markers: f.points.slice(0, 20).map(({ lat, lng }) => ({ lat, lng })) }
+}
+
+/** Turn parsed KML into GeoJSON for the interactive map's Data layer preview. */
+export function kmlToGeoJson(f: KmlFeatures): any {
+  const features: any[] = []
+  for (const p of f.paths) {
+    const ring = p.coords.map(([lat, lng]) => [lng, lat])
+    features.push(
+      p.closed
+        ? { type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] }, properties: {} }
+        : { type: 'Feature', geometry: { type: 'LineString', coordinates: ring }, properties: {} },
+    )
+  }
+  for (const pt of f.points)
+    features.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [pt.lng, pt.lat] }, properties: { name: pt.name } })
+  return { type: 'FeatureCollection', features }
 }
 
 /** Pixel size of the captured still (before the ×2 retina scale).
@@ -91,6 +227,14 @@ export function buildStaticMapUrl(v: StaticMapView): string {
   params.append('style', 'feature:poi|visibility:off')
   params.append('style', 'feature:transit|visibility:off')
   params.append('style', 'element:labels|visibility:off')
+  // KML overlays: encoded-polyline paths + point markers, baked into the still.
+  for (const p of v.paths || []) {
+    const parts = [`color:${p.color}`, `weight:${p.weight}`]
+    if (p.fill) parts.push(`fillcolor:${p.fill}`)
+    parts.push(`enc:${p.enc}`)
+    params.append('path', parts.join('|'))
+  }
+  for (const m of v.markers || []) params.append('markers', `size:tiny|color:0xff3b30ff|${m.lat},${m.lng}`)
   return `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`
 }
 
