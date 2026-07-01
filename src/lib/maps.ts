@@ -210,7 +210,7 @@ export function kmlToAnnotations(f: KmlFeatures, view: CaptureView): MapAnnotati
       kind: 'line',
       x: 0, y: 0, w: 0, h: 0,
       color: p.closed ? '#e11d2a' : '#f59e0b', // polygons red, lines amber
-      weight: 8,
+      weight: 3,
       points,
     })
   }
