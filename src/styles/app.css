@@ -5,20 +5,24 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg-subtle);
+  background: var(--shell-ground);
 }
 
 /* Top nav */
 .appnav {
-  height: 56px;
+  height: 58px;
   flex: none;
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 0 20px;
-  background: var(--navy-700);
+  padding: 0 22px;
+  background: linear-gradient(180deg, var(--navy-600) 0%, var(--navy-700) 100%);
   color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+  /* Thin green engineering rule beneath the nav + soft lift. */
+  box-shadow: 0 1px 0 rgba(121, 192, 67, 0.55), 0 8px 22px -14px rgba(14, 22, 29, 0.7);
+  position: relative;
+  z-index: 5;
 }
 .appnav__brand {
   display: flex;
@@ -135,14 +139,27 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 26px;
+  margin-bottom: 30px;
 }
 .dash__title {
+  position: relative;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 34px;
+  font-size: 42px;
+  letter-spacing: -0.015em;
   color: var(--text-strong);
   margin: 0;
+  padding-bottom: 13px;
+}
+.dash__title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 42px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent-grad);
 }
 .dash__sub {
   color: var(--text-muted);
@@ -163,17 +180,51 @@
   gap: 16px;
 }
 .pcard {
+  position: relative;
+  overflow: hidden;
   background: #fff;
-  border: 1px solid var(--border-subtle);
+  border: none;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--card-ring), var(--shadow-card);
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  transition: box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  animation: pcard-rise 0.5s cubic-bezier(0.2, 0, 0, 1) both;
+}
+/* Green engineering-rule edge that grows in on hover. */
+.pcard::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-grad);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1);
 }
 .pcard:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  box-shadow: var(--card-ring), var(--shadow-card-hover);
+  transform: translateY(-3px);
+}
+.pcard:hover::before {
+  transform: scaleY(1);
+}
+.dash__grid .pcard:nth-child(1) { animation-delay: 0.02s; }
+.dash__grid .pcard:nth-child(2) { animation-delay: 0.06s; }
+.dash__grid .pcard:nth-child(3) { animation-delay: 0.1s; }
+.dash__grid .pcard:nth-child(4) { animation-delay: 0.14s; }
+.dash__grid .pcard:nth-child(5) { animation-delay: 0.18s; }
+.dash__grid .pcard:nth-child(6) { animation-delay: 0.22s; }
+.dash__grid .pcard:nth-child(7) { animation-delay: 0.26s; }
+.dash__grid .pcard:nth-child(8) { animation-delay: 0.3s; }
+@keyframes pcard-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcard { animation: none; }
 }
 .pcard__open {
   background: none;
@@ -705,16 +756,20 @@
 }
 .exec-stat {
   background: #fff;
-  border: 1px solid var(--border-subtle);
+  border: none;
   border-radius: var(--radius-lg);
-  padding: 16px 22px;
+  box-shadow: var(--card-ring), var(--shadow-card);
+  padding: 18px 24px;
   min-width: 200px;
 }
 .exec-stat__big {
   font-family: var(--font-display, serif);
   font-weight: 700;
-  font-size: 30px;
-  color: var(--green-700);
+  font-size: 34px;
+  background: var(--accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   line-height: 1;
 }
 .exec-stat__lbl {

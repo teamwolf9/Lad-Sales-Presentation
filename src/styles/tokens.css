@@ -127,4 +127,18 @@
   --shadow-lg: 0 18px 40px rgba(37, 55, 70, 0.16), 0 6px 14px rgba(37, 55, 70, 0.08);
   --scrim-bottom: linear-gradient(to top, rgba(14, 22, 29, 0.82) 0%, rgba(14, 22, 29, 0.45) 38%, rgba(14, 22, 29, 0) 78%);
   --scrim-diag: linear-gradient(105deg, rgba(14, 22, 29, 0.92) 30%, rgba(14, 22, 29, 0.35) 100%);
+
+  /* --- Elevated look (v2): atmosphere, accent, premium paper --- */
+  --accent-grad: linear-gradient(135deg, var(--green-400) 0%, var(--green-600) 100%);
+  --accent-glow: 0 8px 22px -6px rgba(121, 192, 67, 0.45);
+  /* Blueprint grid overlay for dark work surfaces. */
+  --blueprint:
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  --blueprint-size: 26px 26px;
+  /* Warm-cool engineered-paper ground for the light shell. */
+  --shell-ground: radial-gradient(130% 120% at 88% -8%, #eef4f1 0%, #f3f6f8 42%, #eaeef2 100%);
+  --card-ring: inset 0 0 0 1px rgba(37, 55, 70, 0.055);
+  --shadow-card: 0 1px 2px rgba(37, 55, 70, 0.04), 0 10px 26px -14px rgba(37, 55, 70, 0.2);
+  --shadow-card-hover: 0 2px 6px rgba(37, 55, 70, 0.07), 0 22px 46px -18px rgba(37, 55, 70, 0.3);
 }
