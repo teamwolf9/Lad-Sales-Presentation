@@ -7,7 +7,7 @@
  * cleanly into the PDF / PowerPoint exports (no cross-origin taint).
  */
 import type { MapAnnotation, PivotField } from '../types'
-import { uid, escapeHtml } from './util'
+import { uid } from './util'
 
 export const MAPS_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim()
 export const mapsEnabled = !!MAPS_KEY
@@ -387,34 +387,18 @@ export function kmlToMapData(
     out.push({ id: uid('an'), kind: 'line', x: 0, y: 0, w: 0, h: 0, color: sty.color, weight: sty.weight, points })
   }
 
-  // Number the fields (1-based) and drop a name + acreage callout at each label
-  // anchor (positioned where Google Earth placed the label), so every marker
-  // says what it is — like the reference map.
-  const fields = f.fields.map((fl, i) => ({ ...fl, legendNo: i + 1 }))
-  const labelW = 20
-  for (const fl of fields) {
-    if (fl.lat == null || fl.lng == null) continue
-    const { x, y } = toPct(fl.lat, fl.lng)
-    const acreTxt = fl.acres != null ? `${fl.acres.toFixed(fl.acres < 100 ? 2 : 1)} ac` : ''
-    const safeName = escapeHtml(fl.name || 'Field')
-    const html = acreTxt
-      ? `${safeName}<br><span style="font-weight:600;opacity:.72">${escapeHtml(acreTxt)}</span>`
-      : safeName
-    out.push({
-      id: uid('an'),
-      kind: 'text',
-      x: +(x - labelW / 2).toFixed(2),
-      y: +(y - 1.6).toFixed(2),
-      w: labelW,
-      h: 3,
-      color: fl.excluded ? '#6b7280' : '#1f2937',
-      fill: '#ffffff',
-      text: acreTxt ? `${fl.name} · ${acreTxt}` : fl.name,
-      html,
-      fontPct: 2,
-      bold: true,
-    })
-  }
+  // Number the fields (1-based) and project each one's map-pin position (mx,my)
+  // as a percentage of the image. The pins are rendered as a dedicated marker
+  // layer (see MapStage), not as editable text boxes.
+  const fields = f.fields.map((fl, i) => {
+    const rec: PivotField = { ...fl, legendNo: i + 1 }
+    if (fl.lat != null && fl.lng != null) {
+      const { x, y } = toPct(fl.lat, fl.lng)
+      rec.mx = x
+      rec.my = y
+    }
+    return rec
+  })
   return { annotations: out, fields }
 }
 

@@ -958,6 +958,47 @@
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* Imported-field pin markers — a colored dot on each pivot + a compact label.
+   Sizes are in cqw so they scale with the map (map-stage is container-type:size). */
+.field-markers {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.field-marker {
+  position: absolute; /* left/top set inline = the pivot point */
+}
+.field-marker__dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.5cqw;
+  height: 1.5cqw;
+  min-width: 6px;
+  min-height: 6px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 0.3cqw solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.field-marker__label {
+  position: absolute;
+  left: 1.3cqw;
+  top: 0;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: 2cqw;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.8);
+}
+.field-marker__ac {
+  font-weight: 600;
+  opacity: 0.9;
+}
 .mapsheet__img {
   max-width: 100%;
   max-height: 100%;

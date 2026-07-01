@@ -7,7 +7,7 @@
  * (Presentation) and the slide deck; the builder's editor reuses useContainBox.
  */
 import { useLayoutEffect, useRef, useState } from 'react'
-import type { MapAnnotation, MapPage } from '../types'
+import type { MapAnnotation, MapPage, PivotField } from '../types'
 import { cls, escapeHtml } from '../lib/util'
 import { useMapEdit } from './mapEdit'
 import { MapInteractiveLayer } from './MapInteractiveLayer'
@@ -133,6 +133,27 @@ export function AnnotationLayer({ annotations, aspect }: { annotations: MapAnnot
   )
 }
 
+/** Non-editable pin markers for imported pivot fields, drawn from map.fields.
+ *  A colored dot sits exactly on each pivot; a compact label reads out the name
+ *  + acreage. pointer-events are off so it never blocks annotation editing. */
+export function FieldMarkers({ fields }: { fields: PivotField[] }) {
+  const marks = fields.filter((f) => f.mx != null && f.my != null)
+  if (!marks.length) return null
+  return (
+    <div className="field-markers">
+      {marks.map((f) => (
+        <div className="field-marker" key={f.id} style={{ left: `${f.mx}%`, top: `${f.my}%` }}>
+          <span className="field-marker__dot" style={{ background: f.excluded ? '#6b7280' : f.color || '#f97316' }} />
+          <span className="field-marker__label">
+            {f.name || 'Field'}
+            {f.acres != null && <span className="field-marker__ac"> · {f.acres.toFixed(f.acres < 100 ? 2 : 1)} ac</span>}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** Image + annotations, fitted (contain) inside the given box.
  *  When `editable` and a MapEditContext is present, the annotations become
  *  interactive (used by the live document preview). */
@@ -154,6 +175,7 @@ export function MapStage({ map, className, editable }: { map: MapPage; className
         ) : (
           <AnnotationLayer annotations={map.annotations ?? []} aspect={aspect} />
         )}
+        <FieldMarkers fields={map.fields ?? []} />
       </div>
     </div>
   )

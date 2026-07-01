@@ -204,8 +204,12 @@ export interface PivotField {
   color?: string
   /** True for a keep-out / non-irrigated zone (e.g. "Exclude Due to Terrain"). */
   excluded?: boolean
-  /** 1-based number shown on the map marker + in the legend. */
+  /** 1-based number shown in the legend. */
   legendNo?: number
+  /** Marker position as a percentage (0–100) of the captured map image box,
+   *  projected at import time. Drives the on-map pin. */
+  mx?: number
+  my?: number
 }
 
 /** The field-map page (Google Maps capture or imported JPG/PNG + title block). */
