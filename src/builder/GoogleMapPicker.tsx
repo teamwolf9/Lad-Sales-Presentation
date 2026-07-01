@@ -2,19 +2,11 @@
  * Interactive Google Maps picker. The rep searches an address / pans + zooms to
  * the field, then "Use this view" captures a Maps Static image of that exact
  * center / zoom / type as a data URL for the Map page.
+ *
+ * (KML import is a separate, standalone button on the Map step — see Builder.)
  */
 import { useEffect, useRef, useState } from 'react'
-import {
-  loadGoogleMaps,
-  buildStaticMapUrl,
-  imageUrlToDataUrl,
-  mapScaleLabel,
-  parseKml,
-  kmlToMapData,
-  kmlToGeoJson,
-  type KmlFeatures,
-} from '../lib/maps'
-import type { MapAnnotation, PivotField } from '../types'
+import { loadGoogleMaps, buildStaticMapUrl, imageUrlToDataUrl, mapScaleLabel } from '../lib/maps'
 
 export function GoogleMapPicker({
   initialQuery,
@@ -22,23 +14,15 @@ export function GoogleMapPicker({
   onCancel,
 }: {
   initialQuery?: string
-  onCapture: (
-    dataUrl: string,
-    aspect: number,
-    scale: string,
-    annotations?: MapAnnotation[],
-    fields?: PivotField[],
-  ) => void
+  onCapture: (dataUrl: string, aspect: number, scale: string) => void
   onCancel: () => void
 }) {
   const mapDivRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const kmlInputRef = useRef<HTMLInputElement>(null)
   const mapRef = useRef<any>(null)
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [kml, setKml] = useState<KmlFeatures | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -111,51 +95,6 @@ export function GoogleMapPicker({
     }
   }, [initialQuery])
 
-  // Draw an imported KML on the interactive map and frame it.
-  const drawKml = (features: KmlFeatures) => {
-    const map = mapRef.current
-    const google = (window as any).google
-    if (!map || !google) return
-    map.data.forEach((f: any) => map.data.remove(f))
-    map.data.addGeoJson(kmlToGeoJson(features))
-    map.data.setStyle((feature: any) => ({
-      strokeColor: feature.getGeometry()?.getType() === 'Point' ? '#e11d2a' : '#ffdd00',
-      strokeWeight: 3,
-      fillOpacity: 0, // outlines only — no translucent fill blob
-      clickable: false,
-      // Small round marker for point placemarks.
-      icon:
-        feature.getGeometry()?.getType() === 'Point'
-          ? { path: (window as any).google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: '#e11d2a', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 1 }
-          : undefined,
-    }))
-    if (features.bounds) {
-      const b = features.bounds
-      map.fitBounds(new google.maps.LatLngBounds({ lat: b.s, lng: b.w }, { lat: b.n, lng: b.e }))
-    }
-  }
-
-  const onPickKml = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    setErr('')
-    try {
-      if (/\.kmz$/i.test(file.name)) throw new Error('KMZ isn’t supported — unzip it and import the .kml inside.')
-      const features = parseKml(await file.text())
-      setKml(features)
-      drawKml(features)
-    } catch (err) {
-      setErr(err instanceof Error ? err.message : 'Could not read that KML file.')
-    }
-  }
-
-  const clearKml = () => {
-    const map = mapRef.current
-    if (map) map.data.forEach((f: any) => map.data.remove(f))
-    setKml(null)
-  }
-
   const capture = async () => {
     const map = mapRef.current
     if (!map) return
@@ -181,12 +120,9 @@ export function GoogleMapPicker({
       const cap = Math.min(1, 640 / w, 640 / h)
       w = Math.round(w * cap)
       h = Math.round(h * cap)
-      // Capture a clean satellite still. Any imported KML becomes EDITABLE map
-      // annotations projected onto this exact view (not baked into the image).
       const url = buildStaticMapUrl({ lat, lng: c.lng(), zoom: zi, mapType: map.getMapTypeId() || 'satellite', w, h })
       const dataUrl = await imageUrlToDataUrl(url)
-      const md = kml ? kmlToMapData(kml, { lat, lng: c.lng(), zoom: zi, w, h }) : undefined
-      onCapture(dataUrl, w / h, mapScaleLabel(lat, zi, w), md?.annotations, md?.fields)
+      onCapture(dataUrl, w / h, mapScaleLabel(lat, zi, w))
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not capture the map view.')
     } finally {
@@ -204,30 +140,10 @@ export function GoogleMapPicker({
         <div className="gmap__map" ref={mapDivRef} />
         {!ready && !err && <div className="gmap__loading">Loading map…</div>}
       </div>
-      <input
-        ref={kmlInputRef}
-        type="file"
-        accept=".kml,application/vnd.google-earth.kml+xml,text/xml"
-        onChange={onPickKml}
-        style={{ display: 'none' }}
-      />
       <div className="gmap__actions">
         <button className="btn btn--ghost btn--sm" type="button" onClick={onCancel}>
           Cancel
         </button>
-        {kml ? (
-          <span className="gmap__kml">
-            KML: {kml.paths.length} shape{kml.paths.length === 1 ? '' : 's'}
-            {kml.points.length ? ` · ${kml.points.length} pt` : ''}
-            <button type="button" className="gmap__kmlx" onClick={clearKml} title="Remove KML">
-              ✕
-            </button>
-          </span>
-        ) : (
-          <button className="btn btn--ghost btn--sm" type="button" onClick={() => kmlInputRef.current?.click()} disabled={!ready}>
-            Import KML
-          </button>
-        )}
         <button className="btn btn--primary btn--sm" type="button" onClick={capture} disabled={!ready || busy}>
           {busy ? 'Capturing…' : 'Use this view'}
         </button>

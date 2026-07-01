@@ -323,6 +323,27 @@ function project(lat: number, lng: number): { x: number; y: number } {
 
 export interface CaptureView { lat: number; lng: number; zoom: number; w: number; h: number }
 
+/** Pick a center + integer zoom that frames `bounds` inside a `w`×`h` still,
+ *  with a little padding, so a KML can be captured headlessly (no interactive
+ *  map). Returns a CaptureView ready for buildStaticMapUrl + kmlToMapData. */
+export function captureViewForBounds(
+  bounds: { n: number; s: number; e: number; w: number },
+  w = STATIC_W,
+  h = STATIC_H,
+  pad = 0.9,
+): CaptureView {
+  const lat = (bounds.n + bounds.s) / 2
+  const lng = (bounds.e + bounds.w) / 2
+  // Zoom-0 pixel span of the bounds, then the largest integer zoom that still
+  // fits both axes within the padded image.
+  const spanX = Math.abs(project(lat, bounds.e).x - project(lat, bounds.w).x) || 1e-6
+  const spanY = Math.abs(project(bounds.n, lng).y - project(bounds.s, lng).y) || 1e-6
+  const zx = Math.log2((w * pad) / spanX)
+  const zy = Math.log2((h * pad) / spanY)
+  const zoom = Math.max(1, Math.min(21, Math.floor(Math.min(zx, zy))))
+  return { lat, lng, zoom, w, h }
+}
+
 /** The curated Valmont layers we render (Google-Earth look) + their styling.
  *  Everything not listed here (benders, endgun/cart/road/guidance paths, span
  *  overhangs, pivot-location squares, …) is intentionally skipped to keep the

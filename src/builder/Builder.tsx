@@ -7,7 +7,16 @@ import type { Project } from '../types'
 import { Icon } from '../ui/Icon'
 import { uid, formatCurrency, cls } from '../lib/util'
 import { uploadImageFile, uploadDataUrl } from '../lib/uploads'
-import { mapsEnabled, imageAspectOf } from '../lib/maps'
+import {
+  mapsEnabled,
+  imageAspectOf,
+  parseKml,
+  captureViewForBounds,
+  buildStaticMapUrl,
+  imageUrlToDataUrl,
+  kmlToMapData,
+  mapScaleLabel,
+} from '../lib/maps'
 import { MapStage } from '../presentation/MapStage'
 import { GoogleMapPicker } from './GoogleMapPicker'
 import { ErrorBoundary } from '../ui/ErrorBoundary'
@@ -31,7 +40,9 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
   const { user } = useAuth()
   const [step, setStep] = useState(0)
   const [mapPicker, setMapPicker] = useState(false)
+  const [kmlBusy, setKmlBusy] = useState(false)
   const mapFileRef = useRef<HTMLInputElement>(null)
+  const kmlFileRef = useRef<HTMLInputElement>(null)
   const p = proposal
 
   // Tell the preview which section this step corresponds to, so it scrolls/highlights it.
@@ -183,6 +194,46 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
       alert('Could not save the captured map. Please try again.')
     }
     setMapPicker(false)
+  }
+
+  // ---- standalone KML import (no interactive map) ----
+  // Parse a Valmont KML, auto-frame its bounds, capture a satellite still of that
+  // exact view, and project the shapes + pivot fields onto it — one button.
+  const onImportKmlFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-importing the same filename
+    if (!file) return
+    setKmlBusy(true)
+    try {
+      if (/\.kmz$/i.test(file.name)) throw new Error('KMZ isn’t supported — unzip it and import the .kml inside.')
+      const features = parseKml(await file.text())
+      if (!features.bounds) throw new Error('That KML has no map shapes to place.')
+      const view = captureViewForBounds(features.bounds)
+      const url = buildStaticMapUrl({ lat: view.lat, lng: view.lng, zoom: view.zoom, mapType: 'satellite', w: view.w, h: view.h })
+      const dataUrl = await imageUrlToDataUrl(url)
+      const saved = await uploadDataUrl(dataUrl, user?.uid, 'maps')
+      const { annotations, fields } = kmlToMapData(features, view)
+      mapPatch({
+        imageUrl: saved,
+        imageAspect: view.w / view.h,
+        scale: mapScaleLabel(view.lat, view.zoom, view.w),
+        enabled: true,
+        annotations,
+        fields,
+      })
+      setNotice({
+        kind: 'ok',
+        lines: [
+          `Imported ${fields.filter((f) => !f.excluded).length} field${fields.filter((f) => !f.excluded).length === 1 ? '' : 's'} from KML`,
+          'Edit names & acres on the Fields step.',
+        ],
+      })
+    } catch (err) {
+      console.error('KML import failed', err)
+      setNotice({ kind: 'err', lines: ['Could not import that KML.', err instanceof Error ? err.message : 'Unknown error.'] })
+    } finally {
+      setKmlBusy(false)
+    }
   }
 
   // ---- imported pivot fields (KML) ----
@@ -523,6 +574,11 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
                   <button className="btn btn--ghost btn--sm" onClick={() => mapFileRef.current?.click()}>
                     <Icon name="plus" size={15} /> Replace image
                   </button>
+                  {mapsEnabled && (
+                    <button className="btn btn--ghost btn--sm" onClick={() => kmlFileRef.current?.click()} disabled={kmlBusy}>
+                      <Icon name="map" size={15} /> {kmlBusy ? 'Importing…' : 'Import KML'}
+                    </button>
+                  )}
                   <button className="btn btn--ghost btn--sm" onClick={() => mapPatch({ imageUrl: '', annotations: [], fields: [] })}>
                     <Icon name="trash" size={15} /> Remove
                   </button>
@@ -531,7 +587,12 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
             ) : (
               <div className="map-source">
                 {mapsEnabled && (
-                  <button className="btn btn--primary btn--block" onClick={() => setMapPicker(true)}>
+                  <button className="btn btn--primary btn--block" onClick={() => kmlFileRef.current?.click()} disabled={kmlBusy}>
+                    <Icon name="map" size={15} /> {kmlBusy ? 'Importing KML…' : 'Import Valmont KML'}
+                  </button>
+                )}
+                {mapsEnabled && (
+                  <button className="btn btn--ghost btn--block" onClick={() => setMapPicker(true)}>
                     <Icon name="map" size={15} /> Pick a view from Google Maps
                   </button>
                 )}
@@ -542,6 +603,7 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
             )}
             </ErrorBoundary>
             <input ref={mapFileRef} type="file" accept="image/png,image/jpeg" onChange={onPickMapImage} style={{ display: 'none' }} />
+            <input ref={kmlFileRef} type="file" accept=".kml,application/vnd.google-earth.kml+xml,text/xml" onChange={onImportKmlFile} style={{ display: 'none' }} />
 
             <Text label="Caption" maxLength={70} value={p.map.caption} onChange={(v) => mapPatch({ caption: v })} placeholder="e.g. Snake View Pipeline & Pump Replacement" />
             <div className="field-row">
