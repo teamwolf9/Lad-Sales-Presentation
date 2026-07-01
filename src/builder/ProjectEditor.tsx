@@ -1,9 +1,10 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { Project, ProjectLine } from '../types'
 import { Icon } from '../ui/Icon'
 import { uid, formatCurrency, cls } from '../lib/util'
 import { uploadImageFile } from '../lib/uploads'
 import { projectLineTotal, projectSubtotal, projectTax, projectTotal } from '../lib/pricing'
+import { aiEnabled, draftScopeSummary } from '../lib/ai'
 import { Text, Area, Num } from './controls'
 
 const UNITS = ['ea', 'ft', 'lot', 'system', 'set', 'hrs', 'acre']
@@ -22,7 +23,24 @@ export function ProjectEditor({
   onRemove: () => void
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [drafting, setDrafting] = useState(false)
   const set = <K extends keyof Project>(key: K, value: Project[K]) => onChange({ ...project, [key]: value })
+
+  const onDraftScope = async () => {
+    setDrafting(true)
+    try {
+      const text = await draftScopeSummary({
+        title: project.title,
+        location: project.location,
+        lines: project.lines,
+      })
+      set('description', text.slice(0, 240))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not draft the scope summary.')
+    } finally {
+      setDrafting(false)
+    }
+  }
 
   const setLine = (id: string, patch: Partial<ProjectLine>) =>
     set('lines', project.lines.map((l) => (l.id === id ? { ...l, ...patch } : l)))
@@ -62,6 +80,18 @@ export function ProjectEditor({
       <Text label="Title" maxLength={70} value={project.title} onChange={(v) => set('title', v)} placeholder="e.g. Snakeview River Lift Station" />
       <Text label="Farm / location" maxLength={70} value={project.location} onChange={(v) => set('location', v)} placeholder="e.g. Snake View Farm · Burbank, WA" />
       <Area label="Scope summary" rows={2} maxLength={240} value={project.description} onChange={(v) => set('description', v)} placeholder="One sentence describing this scope of work." />
+      {aiEnabled && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4, marginBottom: 8 }}>
+          <button
+            className="btn btn--ghost btn--sm"
+            onClick={onDraftScope}
+            disabled={drafting}
+            title="Draft this scope summary from the line items with Claude"
+          >
+            <Icon name="sparkle" size={14} /> {drafting ? 'Drafting…' : 'Draft with AI'}
+          </button>
+        </div>
+      )}
 
       {/* Map / photo upload */}
       <div className="mini-label">Project map / photo (optional)</div>
