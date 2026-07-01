@@ -209,7 +209,7 @@ export function kmlToAnnotations(f: KmlFeatures, view: CaptureView): MapAnnotati
       id: uid('an'),
       kind: 'line',
       x: 0, y: 0, w: 0, h: 0,
-      color: p.closed ? '#e11d2a' : '#f59e0b', // polygons red, lines amber
+      color: p.closed ? '#2563eb' : '#f59e0b', // rings/polygons blue, lines amber
       weight: 3,
       points,
     })
