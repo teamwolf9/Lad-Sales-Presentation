@@ -151,51 +151,60 @@ export function FieldMarkers({ fields }: { fields: PivotField[] }) {
   useLayoutEffect(() => {
     const wrap = wrapRef.current
     if (!wrap) return
-    const wr = wrap.getBoundingClientRect()
-    if (!wr.height || !wrap.clientHeight) return
-    const scale = wr.height / wrap.clientHeight // scaled px per layout px
     // Boxes are measured independent of any applied vertical offset: horizontal
     // extent + intrinsic height come from the label; the baseline top is centered
     // on the (fixed) dot. So re-running never drifts.
     type Box = { id: string; left: number; right: number; top: number; height: number }
-    const items: Box[] = []
-    for (const el of Array.from(wrap.querySelectorAll<HTMLElement>('.field-marker'))) {
-      const id = el.dataset.mid
-      const label = el.querySelector<HTMLElement>('.field-marker__label')
-      const dot = el.querySelector<HTMLElement>('.field-marker__dot')
-      if (!id || !label || !dot) continue
-      const lr = label.getBoundingClientRect()
-      const dr = dot.getBoundingClientRect()
-      items.push({
-        id,
-        left: lr.left - wr.left,
-        right: lr.right - wr.left,
-        top: (dr.top + dr.bottom) / 2 - wr.top - lr.height / 2,
-        height: lr.height,
+    const compute = () => {
+      const wr = wrap.getBoundingClientRect()
+      if (!wr.height || !wrap.clientHeight) return
+      const scale = wr.height / wrap.clientHeight // scaled px per layout px
+      const items: Box[] = []
+      for (const el of Array.from(wrap.querySelectorAll<HTMLElement>('.field-marker'))) {
+        const id = el.dataset.mid
+        const label = el.querySelector<HTMLElement>('.field-marker__label')
+        const dot = el.querySelector<HTMLElement>('.field-marker__dot')
+        if (!id || !label || !dot) continue
+        const lr = label.getBoundingClientRect()
+        const dr = dot.getBoundingClientRect()
+        items.push({
+          id,
+          left: lr.left - wr.left,
+          right: lr.right - wr.left,
+          top: (dr.top + dr.bottom) / 2 - wr.top - lr.height / 2,
+          height: lr.height,
+        })
+      }
+      if (!items.length) return
+      items.sort((a, b) => a.top - b.top)
+      const placed: Box[] = []
+      const next: Record<string, number> = {}
+      const GAP = 2 // scaled px
+      for (const it of items) {
+        let top = it.top
+        let moved = true
+        let guard = 0
+        while (moved && guard++ < 300) {
+          moved = false
+          for (const p of placed) {
+            const hit = it.left < p.right + GAP && it.right > p.left - GAP && top < p.top + p.height + GAP && top + it.height > p.top - GAP
+            if (hit) { top = p.top + p.height + GAP; moved = true }
+          }
+        }
+        next[it.id] = (top - it.top) / scale // → layout px for translateY
+        placed.push({ ...it, top })
+      }
+      setOffsets((prev) => {
+        const ids = new Set([...Object.keys(prev), ...Object.keys(next)])
+        const changed = [...ids].some((id) => Math.abs((prev[id] || 0) - (next[id] || 0)) > 0.5)
+        return changed ? next : prev
       })
     }
-    items.sort((a, b) => a.top - b.top)
-    const placed: Box[] = []
-    const next: Record<string, number> = {}
-    const GAP = 2 // scaled px
-    for (const it of items) {
-      let top = it.top
-      let moved = true
-      let guard = 0
-      while (moved && guard++ < 300) {
-        moved = false
-        for (const p of placed) {
-          const hit = it.left < p.right + GAP && it.right > p.left - GAP && top < p.top + p.height + GAP && top + it.height > p.top - GAP
-          if (hit) { top = p.top + p.height + GAP; moved = true }
-        }
-      }
-      next[it.id] = (top - it.top) / scale // → layout px for translateY
-      placed.push({ ...it, top })
-    }
-    setOffsets((prev) => {
-      const changed = items.some((it) => Math.abs((prev[it.id] || 0) - (next[it.id] || 0)) > 0.5)
-      return changed ? next : prev
-    })
+    compute()
+    // The map sizes after its image lays out; recompute whenever the box resizes.
+    const ro = new ResizeObserver(compute)
+    ro.observe(wrap)
+    return () => ro.disconnect()
   }, [key])
 
   if (!marks.length) return null
