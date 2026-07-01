@@ -214,20 +214,22 @@ export function kmlToAnnotations(f: KmlFeatures, view: CaptureView): MapAnnotati
       points,
     })
   }
+  // Points → small round marker dots (not big text boxes). Diameter is in % of
+  // width; height uses the image aspect so the dot renders circular.
+  const aspectWH = view.w / view.h
+  const d = 1.6
   for (const pt of f.points) {
     const { x, y } = toPct(pt.lat, pt.lng)
-    const w = 24, h = 9
+    const dh = +(d * aspectWH).toFixed(2)
     out.push({
       id: uid('an'),
-      kind: 'text',
-      x: +(x - w / 2).toFixed(2),
-      y: +(y - h / 2).toFixed(2),
-      w, h,
-      color: '#ffffff',
+      kind: 'ellipse',
+      x: +(x - d / 2).toFixed(2),
+      y: +(y - dh / 2).toFixed(2),
+      w: d,
+      h: dh,
+      color: '#e11d2a',
       fill: '#e11d2a',
-      text: pt.name || '•',
-      fontPct: 3.2,
-      bold: true,
     })
   }
   return out

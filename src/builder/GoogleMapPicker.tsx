@@ -112,13 +112,17 @@ export function GoogleMapPicker({
     if (!map || !google) return
     map.data.forEach((f: any) => map.data.remove(f))
     map.data.addGeoJson(kmlToGeoJson(features))
-    map.data.setStyle({
-      strokeColor: '#ffdd00',
+    map.data.setStyle((feature: any) => ({
+      strokeColor: feature.getGeometry()?.getType() === 'Point' ? '#e11d2a' : '#ffdd00',
       strokeWeight: 3,
-      fillColor: '#ff3b30',
-      fillOpacity: 0.12,
+      fillOpacity: 0, // outlines only — no translucent fill blob
       clickable: false,
-    })
+      // Small round marker for point placemarks.
+      icon:
+        feature.getGeometry()?.getType() === 'Point'
+          ? { path: (window as any).google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: '#e11d2a', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 1 }
+          : undefined,
+    }))
     if (features.bounds) {
       const b = features.bounds
       map.fitBounds(new google.maps.LatLngBounds({ lat: b.s, lng: b.w }, { lat: b.n, lng: b.e }))
