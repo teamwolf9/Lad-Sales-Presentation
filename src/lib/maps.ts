@@ -6,8 +6,8 @@
  * center/zoom/type and converts it to a data URL, so the captured map embeds
  * cleanly into the PDF / PowerPoint exports (no cross-origin taint).
  */
-import type { MapAnnotation } from '../types'
-import { uid } from './util'
+import type { MapAnnotation, PivotField } from '../types'
+import { uid, escapeHtml } from './util'
 
 export const MAPS_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim()
 export const mapsEnabled = !!MAPS_KEY
@@ -66,10 +66,35 @@ export interface StaticMapView {
 
 /* --------------------------------- KML --------------------------------- */
 
+export interface KmlPath {
+  /** Line + polygon ring as [lat,lng][]. */
+  coords: [number, number][]
+  /** True for a closed polygon ring. */
+  closed: boolean
+  /** Valmont shape type (e.g. 'polygon', 'circlewithpivot', 'span circle',
+   *  'keepOut'), when the KML carries ExtendedData. */
+  vType?: string
+  /** Resolved stroke color (hex), from ExtendedData or the referenced Style. */
+  color?: string
+}
+
+export interface KmlPoint {
+  lat: number
+  lng: number
+  name?: string
+  vType?: string
+  /** e.g. 'AREALABEL' — a text-only label placemark. */
+  pointType?: string
+  /** Groups labels + geometry belonging to the same pivot/machine. */
+  machineId?: string
+}
+
 export interface KmlFeatures {
-  /** Line + polygon rings as [lat,lng][] with a closed flag (polygon). */
-  paths: { coords: [number, number][]; closed: boolean }[]
-  points: { lat: number; lng: number; name?: string }[]
+  /** Line + polygon rings (see KmlPath). */
+  paths: KmlPath[]
+  points: KmlPoint[]
+  /** Pivots / fields + keep-out zones extracted from Valmont ExtendedData. */
+  fields: PivotField[]
   /** Geographic bounds of everything, or null if empty. */
   bounds: { n: number; s: number; e: number; w: number } | null
 }
@@ -88,35 +113,148 @@ function parseCoords(text: string | null | undefined): [number, number][] {
   return out
 }
 
-/** Parse a KML document string into line/polygon/point features + bounds. */
+/** Convert a KML color (`aabbggrr`, hex) to a CSS `#rrggbb`. Returns undefined
+ *  for unparseable / named values so callers can fall back to a palette. */
+export function kmlColorToHex(kml: string | undefined): string | undefined {
+  if (!kml) return undefined
+  const h = kml.trim().replace(/^#/, '')
+  if (!/^[0-9a-fA-F]{8}$/.test(h)) return undefined
+  const bb = h.slice(2, 4), gg = h.slice(4, 6), rr = h.slice(6, 8)
+  return `#${rr}${gg}${bb}`.toLowerCase()
+}
+
+/** Read a Placemark's `<ExtendedData>` into a flat { name: firstValue } map. */
+function readExtData(pm: Element): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const d of nsEls(pm, 'Data')) {
+    const key = d.getAttribute('name')
+    if (!key || key in out) continue
+    const val = nsEls(d, 'value')[0]?.textContent?.trim()
+    if (val != null) out[key] = val
+  }
+  return out
+}
+
+/** Map a Style id (`#OutlineRedStyle`) to the document's `<LineStyle><color>`. */
+function buildStyleColorMap(doc: Document): Record<string, string> {
+  const map: Record<string, string> = {}
+  for (const st of nsEls(doc, 'Style')) {
+    const id = st.getAttribute('id')
+    if (!id) continue
+    const line = nsEls(st, 'LineStyle')[0]
+    const col = line && nsEls(line, 'color')[0]?.textContent?.trim()
+    const hex = kmlColorToHex(col || undefined)
+    if (hex) map[id] = hex
+  }
+  return map
+}
+
+/** Average of a ring's vertices → a rough centroid [lat,lng] for label placement. */
+function ringCentroid(coords: [number, number][]): [number, number] | undefined {
+  if (!coords.length) return undefined
+  let lat = 0, lng = 0
+  for (const [la, ln] of coords) { lat += la; lng += ln }
+  return [lat / coords.length, lng / coords.length]
+}
+
+/** Parse a KML document into classified paths/points + pivot fields + bounds.
+ *  Understands Valmont pivot-design exports (ExtendedData) while still working
+ *  for plain KML (no ExtendedData → generic paths/points, no fields). */
 export function parseKml(text: string): KmlFeatures {
   const doc = new DOMParser().parseFromString(text, 'application/xml')
   if (doc.querySelector('parsererror')) throw new Error('That file isn’t valid KML/XML.')
 
-  const paths: KmlFeatures['paths'] = []
-  const points: KmlFeatures['points'] = []
+  const styleColors = buildStyleColorMap(doc)
+  const paths: KmlPath[] = []
+  const points: KmlPoint[] = []
+  // Per-machine accumulators, keyed by machineareaId.
+  const machines = new Map<string, PivotField>()
+  const fallbackNames = new Map<string, string>() // internal names, used only if no label
+  const keepOuts: PivotField[] = []
 
-  for (const ls of nsEls(doc, 'LineString')) {
-    const coords = parseCoords(nsEls(ls, 'coordinates')[0]?.textContent)
-    if (coords.length >= 2) paths.push({ coords, closed: false })
+  const ensureMachine = (id: string): PivotField => {
+    let m = machines.get(id)
+    if (!m) { m = { id: uid('fld'), name: '' }; machines.set(id, m) }
+    return m
   }
-  for (const poly of nsEls(doc, 'Polygon')) {
-    const ring = nsEls(poly, 'LinearRing')[0]
-    const coords = parseCoords(nsEls(ring, 'coordinates')[0]?.textContent)
-    if (coords.length >= 3) paths.push({ coords, closed: true })
-  }
-  for (const pt of nsEls(doc, 'Point')) {
-    const [c] = parseCoords(nsEls(pt, 'coordinates')[0]?.textContent)
-    if (!c) continue
-    // Nearest ancestor Placemark's <name>, if any.
-    let node: Element | null = pt
-    let name: string | undefined
-    while (node && node.localName !== 'Placemark') node = node.parentElement
-    if (node) name = nsEls(node, 'name')[0]?.textContent?.trim() || undefined
-    points.push({ lat: c[0], lng: c[1], name })
+
+  for (const pm of nsEls(doc, 'Placemark')) {
+    const ext = readExtData(pm)
+    const desc = nsEls(pm, 'description')[0]?.textContent?.trim()
+    const vType = ext.valmontShapeType || desc || undefined
+    const name = nsEls(pm, 'name')[0]?.textContent?.trim() || undefined
+    const styleUrl = nsEls(pm, 'styleUrl')[0]?.textContent?.trim().replace(/^#/, '')
+    const color = kmlColorToHex(ext.color) || (styleUrl ? styleColors[styleUrl] : undefined)
+    const machineId = ext.machineareaId || undefined
+
+    // Geometry → paths (remember the first polygon ring for a keep-out centroid).
+    let firstRing: [number, number][] | undefined
+    for (const ls of nsEls(pm, 'LineString')) {
+      const coords = parseCoords(nsEls(ls, 'coordinates')[0]?.textContent)
+      if (coords.length >= 2) paths.push({ coords, closed: false, vType, color })
+    }
+    for (const poly of nsEls(pm, 'Polygon')) {
+      const ring = nsEls(poly, 'LinearRing')[0]
+      const coords = parseCoords(nsEls(ring, 'coordinates')[0]?.textContent)
+      if (coords.length >= 3) { paths.push({ coords, closed: true, vType, color }); firstRing = firstRing || coords }
+    }
+    const pointEl = nsEls(pm, 'Point')[0]
+    const pc = pointEl ? parseCoords(nsEls(pointEl, 'coordinates')[0]?.textContent)[0] : undefined
+    if (pc) points.push({ lat: pc[0], lng: pc[1], name, vType, pointType: ext.pointType, machineId })
+
+    // ---- Field extraction (Valmont) ----
+    if (vType === 'keepOut') {
+      const acres = Number(ext.keepOutArea)
+      const c = firstRing ? ringCentroid(firstRing) : undefined
+      keepOuts.push({
+        id: uid('fld'),
+        name: ext.keepOutId || ext.PolygonOption || name || 'Excluded area',
+        acres: isFinite(acres) ? acres : undefined,
+        lat: c?.[0],
+        lng: c?.[1],
+        color: color || '#9ca3af',
+        excluded: true,
+      })
+    } else if (machineId) {
+      const m = ensureMachine(machineId)
+      if (vType === 'circlewithpivot') {
+        // The pivot machine's record: radius, color, and a fallback center.
+        const rf = Number(ext.enteredRadiusFeet)
+        if (isFinite(rf)) m.radiusFeet = Math.round(rf)
+        const hex = kmlColorToHex(ext.color)
+        if (hex) m.color = hex
+        else if (color && !m.color) m.color = color
+        const [lng, lat] = (ext.latLon || '').split(',').map(Number)
+        if (isFinite(lat) && isFinite(lng) && m.lat == null) { m.lat = lat; m.lng = lng }
+        const internal = ext.originalmachineareaname || ext.machineareaname
+        if (internal && !fallbackNames.has(machineId)) fallbackNames.set(machineId, internal)
+      } else if (vType === 'point') {
+        // Label placemarks are typed: DESIGN_OR_FIELD_NAME / COORDINATES / AREALABEL.
+        const t = (name || ext.dataIs || '').trim()
+        const pt = ext.pointType
+        if (pt === 'AREALABEL') {
+          const a = parseFloat(t.replace(/,/g, ''))
+          if (isFinite(a)) m.acres = a
+        } else if (pt === 'DESIGN_OR_FIELD_NAME') {
+          if (t) m.name = t // the real display name always wins
+          if (pc) { m.lat = pc[0]; m.lng = pc[1] } // anchor label where Google Earth placed it
+        } else if (pt === 'COORDINATES' && m.lat == null && pc) {
+          m.lat = pc[0]; m.lng = pc[1]
+        }
+      }
+    }
   }
 
   if (!paths.length && !points.length) throw new Error('No map shapes found in that KML.')
+
+  // Assemble fields: named pivots first, then keep-outs. Drop empty machines.
+  const pivots = [...machines.entries()]
+    .filter(([, m]) => m.name || m.acres != null || m.radiusFeet != null)
+    .map(([id, m]) => {
+      if (!m.name) m.name = fallbackNames.get(id) || 'Pivot'
+      return m
+    })
+  const fields = [...pivots, ...keepOuts]
 
   let n = -90, s = 90, e = -180, w = 180
   const bump = (lat: number, lng: number) => {
@@ -125,7 +263,7 @@ export function parseKml(text: string): KmlFeatures {
   paths.forEach((p) => p.coords.forEach(([lat, lng]) => bump(lat, lng)))
   points.forEach((p) => bump(p.lat, p.lng))
 
-  return { paths, points, bounds: { n, s, e, w } }
+  return { paths, points, fields, bounds: { n, s, e, w } }
 }
 
 /** Down-sample a coordinate list so a single path never blows the URL budget. */
@@ -185,12 +323,28 @@ function project(lat: number, lng: number): { x: number; y: number } {
 
 export interface CaptureView { lat: number; lng: number; zoom: number; w: number; h: number }
 
+/** The curated Valmont layers we render (Google-Earth look) + their styling.
+ *  Everything not listed here (benders, endgun/cart/road/guidance paths, span
+ *  overhangs, pivot-location squares, …) is intentionally skipped to keep the
+ *  proposal map clean and legible. Weights are viewBox units (1000-wide space). */
+const CURATED_LAYERS: Record<string, { color: string; weight: number; maxPts: number }> = {
+  polygon: { color: '#f5b301', weight: 3, maxPts: 240 }, // field boundary — gold
+  circlewithpivot: { color: '#f97316', weight: 2.4, maxPts: 128 }, // pivot circle — orange
+  'span circle': { color: '#fb923c', weight: 1.5, maxPts: 72 }, // range rings — thin orange
+  keepOut: { color: '#9ca3af', weight: 2.2, maxPts: 240 }, // excluded — gray
+}
+
 /**
- * Project parsed KML into EDITABLE map annotations positioned as percentages of
- * the captured still — lines/polygons become `line` annotations, points become
- * `text` markers. `view` is the exact center/zoom/pixel-size that was captured.
+ * Project parsed KML onto the captured still as EDITABLE map data:
+ *  - curated line/ring geometry (boundary, pivot circles, range rings, keep-outs)
+ *  - one numbered marker per field, keyed to the legend/guide
+ * Returns the annotations plus the fields (with `legendNo` assigned). `view` is
+ * the exact center/zoom/pixel-size that was captured.
  */
-export function kmlToAnnotations(f: KmlFeatures, view: CaptureView): MapAnnotation[] {
+export function kmlToMapData(
+  f: KmlFeatures,
+  view: CaptureView,
+): { annotations: MapAnnotation[]; fields: PivotField[] } {
   const scale = Math.pow(2, view.zoom)
   const c = project(view.lat, view.lng)
   const cwx = c.x * scale
@@ -201,38 +355,46 @@ export function kmlToAnnotations(f: KmlFeatures, view: CaptureView): MapAnnotati
     const py = pr.y * scale - cwy + view.h / 2
     return { x: +((px / view.w) * 100).toFixed(2), y: +((py / view.h) * 100).toFixed(2) }
   }
+
   const out: MapAnnotation[] = []
+  // Curated geometry only.
   for (const p of f.paths) {
-    const points = sample(p.coords, 150).map(([lat, lng]) => toPct(lat, lng))
+    const sty = CURATED_LAYERS[p.vType ?? '']
+    if (!sty) continue
+    const points = sample(p.coords, sty.maxPts).map(([lat, lng]) => toPct(lat, lng))
     if (p.closed && points.length) points.push({ ...points[0] }) // close the ring
+    out.push({ id: uid('an'), kind: 'line', x: 0, y: 0, w: 0, h: 0, color: sty.color, weight: sty.weight, points })
+  }
+
+  // Number the fields (1-based) and drop a name + acreage callout at each label
+  // anchor (positioned where Google Earth placed the label), so every marker
+  // says what it is — like the reference map.
+  const fields = f.fields.map((fl, i) => ({ ...fl, legendNo: i + 1 }))
+  const labelW = 20
+  for (const fl of fields) {
+    if (fl.lat == null || fl.lng == null) continue
+    const { x, y } = toPct(fl.lat, fl.lng)
+    const acreTxt = fl.acres != null ? `${fl.acres.toFixed(fl.acres < 100 ? 2 : 1)} ac` : ''
+    const safeName = escapeHtml(fl.name || 'Field')
+    const html = acreTxt
+      ? `${safeName}<br><span style="font-weight:600;opacity:.72">${escapeHtml(acreTxt)}</span>`
+      : safeName
     out.push({
       id: uid('an'),
-      kind: 'line',
-      x: 0, y: 0, w: 0, h: 0,
-      color: p.closed ? '#2563eb' : '#f59e0b', // rings/polygons blue, lines amber
-      weight: 3,
-      points,
+      kind: 'text',
+      x: +(x - labelW / 2).toFixed(2),
+      y: +(y - 1.6).toFixed(2),
+      w: labelW,
+      h: 3,
+      color: fl.excluded ? '#6b7280' : '#1f2937',
+      fill: '#ffffff',
+      text: acreTxt ? `${fl.name} · ${acreTxt}` : fl.name,
+      html,
+      fontPct: 2,
+      bold: true,
     })
   }
-  // Points → small round marker dots (not big text boxes). Diameter is in % of
-  // width; height uses the image aspect so the dot renders circular.
-  const aspectWH = view.w / view.h
-  const d = 1.6
-  for (const pt of f.points) {
-    const { x, y } = toPct(pt.lat, pt.lng)
-    const dh = +(d * aspectWH).toFixed(2)
-    out.push({
-      id: uid('an'),
-      kind: 'ellipse',
-      x: +(x - d / 2).toFixed(2),
-      y: +(y - dh / 2).toFixed(2),
-      w: d,
-      h: dh,
-      color: '#e11d2a',
-      fill: '#e11d2a',
-    })
-  }
-  return out
+  return { annotations: out, fields }
 }
 
 /** Turn parsed KML into GeoJSON for the interactive map's Data layer preview. */

@@ -548,6 +548,35 @@ select option {
   line-height: 1.5;
 }
 
+/* Fields step — imported-pivot totals strip. */
+.fields-totals {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.fields-totals__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.fields-totals__item .k {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(234, 241, 245, 0.55);
+}
+.fields-totals__item .v {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(234, 241, 245, 0.95);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --------------------------- Preview pane --------------------------- */
 .preview {
   background:

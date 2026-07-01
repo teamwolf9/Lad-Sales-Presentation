@@ -45,6 +45,8 @@ export function createEmptyProposal(): Proposal {
       imageUrl: '',
       imageAspect: 0,
       annotations: [],
+      fields: [],
+      showLegend: true,
       caption: '',
       scale: '1 inch : 600 feet',
       designer: '',

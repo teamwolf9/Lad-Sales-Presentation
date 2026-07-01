@@ -186,6 +186,28 @@ export interface MapAnnotation {
   underline?: boolean
 }
 
+/** One irrigated field / pivot machine (or a keep-out zone) extracted from a
+ *  Valmont KML import. Drives the editable "Fields" builder step, the numbered
+ *  map markers, and the map legend. */
+export interface PivotField {
+  id: string
+  /** Field / machine name, e.g. "S_FULL_Wallula_308660". */
+  name: string
+  /** Irrigated acres (or excluded acres for a keep-out zone). */
+  acres?: number
+  /** Pivot radius in feet. */
+  radiusFeet?: number
+  /** Pivot center latitude / longitude. */
+  lat?: number
+  lng?: number
+  /** Display / marker color (hex). */
+  color?: string
+  /** True for a keep-out / non-irrigated zone (e.g. "Exclude Due to Terrain"). */
+  excluded?: boolean
+  /** 1-based number shown on the map marker + in the legend. */
+  legendNo?: number
+}
+
 /** The field-map page (Google Maps capture or imported JPG/PNG + title block). */
 export interface MapPage {
   enabled: boolean
@@ -196,6 +218,10 @@ export interface MapPage {
   imageAspect: number
   /** Overlaid text boxes, shapes and arrows. */
   annotations: MapAnnotation[]
+  /** Pivots / fields imported from a Valmont KML (empty for plain maps). */
+  fields: PivotField[]
+  /** Show the numbered-marker legend/guide on the map page. */
+  showLegend?: boolean
   caption: string
   scale: string
   designer: string

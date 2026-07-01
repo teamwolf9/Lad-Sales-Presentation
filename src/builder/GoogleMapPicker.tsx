@@ -10,11 +10,11 @@ import {
   imageUrlToDataUrl,
   mapScaleLabel,
   parseKml,
-  kmlToAnnotations,
+  kmlToMapData,
   kmlToGeoJson,
   type KmlFeatures,
 } from '../lib/maps'
-import type { MapAnnotation } from '../types'
+import type { MapAnnotation, PivotField } from '../types'
 
 export function GoogleMapPicker({
   initialQuery,
@@ -22,7 +22,13 @@ export function GoogleMapPicker({
   onCancel,
 }: {
   initialQuery?: string
-  onCapture: (dataUrl: string, aspect: number, scale: string, annotations?: MapAnnotation[]) => void
+  onCapture: (
+    dataUrl: string,
+    aspect: number,
+    scale: string,
+    annotations?: MapAnnotation[],
+    fields?: PivotField[],
+  ) => void
   onCancel: () => void
 }) {
   const mapDivRef = useRef<HTMLDivElement>(null)
@@ -179,8 +185,8 @@ export function GoogleMapPicker({
       // annotations projected onto this exact view (not baked into the image).
       const url = buildStaticMapUrl({ lat, lng: c.lng(), zoom: zi, mapType: map.getMapTypeId() || 'satellite', w, h })
       const dataUrl = await imageUrlToDataUrl(url)
-      const annotations = kml ? kmlToAnnotations(kml, { lat, lng: c.lng(), zoom: zi, w, h }) : undefined
-      onCapture(dataUrl, w / h, mapScaleLabel(lat, zi, w), annotations)
+      const md = kml ? kmlToMapData(kml, { lat, lng: c.lng(), zoom: zi, w, h }) : undefined
+      onCapture(dataUrl, w / h, mapScaleLabel(lat, zi, w), md?.annotations, md?.fields)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not capture the map view.')
     } finally {

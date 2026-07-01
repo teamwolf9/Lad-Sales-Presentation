@@ -21,10 +21,10 @@ import { ProjectEditor } from './ProjectEditor'
 import { HydraulicsCalc } from './HydraulicsCalc'
 import { CalculatorToolkit } from './CalculatorToolkit'
 
-const STEPS = ['Setup', 'Customer', 'Services', 'Team', 'Map', 'Design', 'Projects', 'Analysis', 'Summary'] as const
+const STEPS = ['Setup', 'Customer', 'Services', 'Team', 'Map', 'Fields', 'Design', 'Projects', 'Analysis', 'Summary'] as const
 
 /** Which document section each step is editing — drives the live-preview scroll/highlight. */
-const STEP_SECTIONS: string[] = ['cover', 'cover', 'services', 'team', 'map', 'projects', 'projects', 'analysis', 'summary']
+const STEP_SECTIONS: string[] = ['cover', 'cover', 'services', 'team', 'map', 'map', 'projects', 'projects', 'analysis', 'summary']
 
 export function Builder({ onSection }: { onSection?: (key: string) => void }) {
   const { proposal, setProposal, reset } = useProposal()
@@ -109,7 +109,7 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
         settings: { ...prev.settings, showSummary: true },
       }))
       setNotice({ kind: 'ok', lines: [`Imported ${projects.length} project${projects.length === 1 ? '' : 's'}`, ...notes] })
-      setStep(6) // jump to Projects so the new project is visible
+      setStep(7) // jump to Projects so the new project is visible
     } catch (err) {
       console.error('Quote import failed', err)
       setNotice({ kind: 'err', lines: [`Couldn't import that file.`, err instanceof Error ? err.message : 'Unknown error.'] })
@@ -166,16 +166,34 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
     aspect: number,
     scale: string,
     annotations?: import('../types').MapAnnotation[],
+    fields?: import('../types').PivotField[],
   ) => {
     try {
       const url = await uploadDataUrl(dataUrl, user?.uid, 'maps')
-      // KML import returns editable annotations projected onto this capture.
-      mapPatch({ imageUrl: url, imageAspect: aspect, scale, enabled: true, ...(annotations ? { annotations } : {}) })
+      // KML import returns editable annotations + pivot fields projected onto this capture.
+      mapPatch({
+        imageUrl: url,
+        imageAspect: aspect,
+        scale,
+        enabled: true,
+        ...(annotations ? { annotations } : {}),
+        ...(fields ? { fields } : {}),
+      })
     } catch {
       alert('Could not save the captured map. Please try again.')
     }
     setMapPicker(false)
   }
+
+  // ---- imported pivot fields (KML) ----
+  const updateField = (id: string, patch: Partial<import('../types').PivotField>) =>
+    mapPatch({ fields: p.map.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)) })
+  const removeField = (id: string) =>
+    mapPatch({ fields: p.map.fields.filter((f) => f.id !== id) })
+  const addField = () =>
+    mapPatch({ fields: [...p.map.fields, { id: uid('fld'), name: '', legendNo: p.map.fields.length + 1 }] })
+  const totalIrrigated = p.map.fields.filter((f) => !f.excluded).reduce((s, f) => s + (f.acres || 0), 0)
+  const totalExcluded = p.map.fields.filter((f) => f.excluded).reduce((s, f) => s + (f.acres || 0), 0)
 
   const autoSplitPayment = () => {
     const total = investmentTotal(p)
@@ -505,7 +523,7 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
                   <button className="btn btn--ghost btn--sm" onClick={() => mapFileRef.current?.click()}>
                     <Icon name="plus" size={15} /> Replace image
                   </button>
-                  <button className="btn btn--ghost btn--sm" onClick={() => mapPatch({ imageUrl: '', annotations: [] })}>
+                  <button className="btn btn--ghost btn--sm" onClick={() => mapPatch({ imageUrl: '', annotations: [], fields: [] })}>
                     <Icon name="trash" size={15} /> Remove
                   </button>
                 </div>
@@ -537,8 +555,85 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 5 · DESIGN ---------------------------- */}
+        {/* ---------------------------- STEP 5 · FIELDS ---------------------------- */}
         {step === 5 && (
+          <div>
+            <h2 className="section-title">Fields &amp; pivots</h2>
+            <p className="section-hint">
+              Import a Valmont KML from the Map step and each pivot lands here — name, irrigated acres, radius and
+              center. Edit freely; these feed the numbered markers and legend on the field-map page.
+            </p>
+
+            {p.map.fields.length === 0 ? (
+              <div className="help-empty">
+                No fields yet. On the <strong>Map</strong> step, choose <em>Import KML</em> in the Google picker to pull
+                pivots from a Valmont design — or add one manually below.
+              </div>
+            ) : (
+              <>
+                <div className="fields-totals">
+                  <div className="fields-totals__item">
+                    <span className="k">Pivots</span>
+                    <span className="v">{p.map.fields.filter((f) => !f.excluded).length}</span>
+                  </div>
+                  <div className="fields-totals__item">
+                    <span className="k">Irrigated</span>
+                    <span className="v">{totalIrrigated.toFixed(1)} ac</span>
+                  </div>
+                  {totalExcluded > 0 && (
+                    <div className="fields-totals__item">
+                      <span className="k">Excluded</span>
+                      <span className="v">{totalExcluded.toFixed(1)} ac</span>
+                    </div>
+                  )}
+                </div>
+
+                <label className="chip" style={{ margin: '4px 0 14px' }}>
+                  <input
+                    type="checkbox"
+                    checked={p.map.showLegend !== false}
+                    onChange={(e) => mapPatch({ showLegend: e.target.checked })}
+                    style={{ width: 'auto' }}
+                  />
+                  Show the numbered legend on the map page
+                </label>
+
+                {p.map.fields.map((f) => (
+                  <div className="li-card" key={f.id}>
+                    <div className="li-card__head">
+                      <span className="li-card__kind" data-kind={f.excluded ? 'service' : 'product'}>
+                        {f.excluded ? 'excluded' : `field · ${String(f.legendNo ?? '—').padStart(2, '0')}`}
+                      </span>
+                      <button className="icon-btn" onClick={() => removeField(f.id)} title="Remove">
+                        <Icon name="trash" size={16} />
+                      </button>
+                    </div>
+                    <Text label="Name" maxLength={60} value={f.name} onChange={(v) => updateField(f.id, { name: v })} />
+                    <div className="field-row">
+                      <Num label="Irrigated acres" suffix="ac" value={f.acres ?? 0} onChange={(v) => updateField(f.id, { acres: v })} />
+                      <Num label="Radius" suffix="ft" value={f.radiusFeet ?? 0} onChange={(v) => updateField(f.id, { radiusFeet: v })} />
+                    </div>
+                    <label className="chip">
+                      <input
+                        type="checkbox"
+                        checked={!!f.excluded}
+                        onChange={(e) => updateField(f.id, { excluded: e.target.checked })}
+                        style={{ width: 'auto' }}
+                      />
+                      Excluded / keep-out (not irrigated)
+                    </label>
+                  </div>
+                ))}
+              </>
+            )}
+            <button className="btn btn--ghost btn--sm" style={{ marginTop: 8 }} onClick={addField}>
+              <Icon name="plus" size={14} /> Add field
+            </button>
+          </div>
+        )}
+
+        {/* ---------------------------- STEP 6 · DESIGN ---------------------------- */}
+        {step === 6 && (
           <div>
             <h2 className="section-title">Design calculators</h2>
             <p className="section-hint">Lad's system-design sheet, built in. Add the calculators this proposal needs — they compute live and can feed the analysis.</p>
@@ -548,8 +643,8 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 6 · PROJECTS ---------------------------- */}
-        {step === 6 && (
+        {/* ---------------------------- STEP 7 · PROJECTS ---------------------------- */}
+        {step === 7 && (
           <div>
             <h2 className="section-title">Projects</h2>
             <p className="section-hint">Each project is a group of line items with one final cost. Add a project per pump station, mainline, farm, or scope.</p>
@@ -579,8 +674,8 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 7 · ANALYSIS ---------------------------- */}
-        {step === 7 && (
+        {/* ---------------------------- STEP 8 · ANALYSIS ---------------------------- */}
+        {step === 8 && (
           <div>
             <h2 className="section-title">Improvements analysis</h2>
             <p className="section-hint">The before / after comparison page. Enter each feature with its existing and new pressures, or push runs from the Design step.</p>
@@ -635,8 +730,8 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 8 · SUMMARY ---------------------------- */}
-        {step === 8 && (
+        {/* ---------------------------- STEP 9 · SUMMARY ---------------------------- */}
+        {step === 9 && (
           <div>
             <h2 className="section-title">Summary &amp; terms</h2>
             <p className="section-hint">The investment rollup, payment schedule, page toggles, and acceptance terms.</p>

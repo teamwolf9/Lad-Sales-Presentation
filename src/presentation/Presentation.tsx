@@ -168,6 +168,23 @@ export function Presentation({
         <section {...sec('map', 'sheet mapsheet')}>
           <div className="mapsheet__imgwrap">
             <MapStage map={p.map} editable={mapEditable} />
+            {p.map.showLegend !== false && p.map.fields.length > 0 && (
+              <div className="map-legend">
+                <div className="map-legend__title">Fields</div>
+                <ul className="map-legend__list">
+                  {p.map.fields.map((f) => (
+                    <li className="map-legend__row" key={f.id}>
+                      <span
+                        className="map-legend__dot"
+                        style={{ background: f.excluded ? '#6b7280' : f.color || '#f97316' }}
+                      />
+                      <span className="map-legend__name">{f.name || 'Field'}</span>
+                      {f.acres != null && <span className="map-legend__ac">{f.acres.toFixed(f.acres < 100 ? 2 : 1)} ac</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
           <div className="mapsheet__block">
             <img className="mapsheet__logo" src={B.logos.primary} alt={B.name} />

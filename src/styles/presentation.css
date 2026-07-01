@@ -878,12 +878,85 @@
   background: var(--n-100);
 }
 .mapsheet__imgwrap {
+  position: relative;
   flex: 1;
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: #fff;
+  /* Subtle neutral mat + inset so the framed map figure floats rather than
+     bleeding to the page edges. This lets Google's mandatory imagery credit read
+     as part of a bounded map figure instead of stray clutter. */
+  padding: 22px;
+  background: var(--n-100);
   border-bottom: 2px solid var(--navy-600);
+}
+/* Frame the captured map as a deliberate figure (document only — slides keep the
+   edge-to-edge treatment). The border + soft shadow bound the image so its baked
+   attribution clearly belongs to the figure. */
+.mapsheet__imgwrap .map-fit {
+  overflow: visible; /* let the figure's shadow breathe into the mat padding */
+}
+.mapsheet__imgwrap .map-stage {
+  border: 1px solid var(--navy-600);
+  box-shadow: 0 2px 10px rgba(37, 55, 70, 0.18);
+  background: #fff;
+}
+/* Numbered-field legend / guide — a compact map key in the top-left corner. */
+.map-legend {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  z-index: 3;
+  max-width: 38%;
+  max-height: calc(100% - 60px);
+  overflow: hidden;
+  padding: 8px 11px 9px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--navy-600);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(37, 55, 70, 0.22);
+  font-size: 9px;
+  line-height: 1.35;
+  color: var(--navy-600);
+}
+.map-legend__title {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 8.5px;
+  margin-bottom: 5px;
+  color: var(--navy-600);
+}
+.map-legend__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+.map-legend__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+.map-legend__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(37, 55, 70, 0.35);
+}
+.map-legend__name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.map-legend__ac {
+  font-variant-numeric: tabular-nums;
+  color: var(--n-400);
+  font-weight: 700;
+  white-space: nowrap;
 }
 .mapsheet__img {
   max-width: 100%;
