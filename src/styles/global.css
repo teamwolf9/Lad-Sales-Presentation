@@ -91,7 +91,7 @@ button {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(234, 241, 245, 0.5);
+  color: var(--on-dark-faint);
   padding: 7px 11px;
   border-radius: var(--radius-pill);
   border: 1px solid transparent;
@@ -118,6 +118,7 @@ button {
   color: #fff;
   background: var(--brand-primary);
   border-color: var(--brand-primary);
+  box-shadow: 0 4px 14px rgba(121, 192, 67, 0.34);
 }
 .step--active .step__num {
   background: rgba(14, 22, 29, 0.25);
@@ -133,7 +134,7 @@ button {
 .builder__body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px 28px;
+  padding: 24px 26px 36px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
@@ -153,18 +154,31 @@ button {
 }
 
 .section-title {
+  position: relative;
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 31px;
   font-weight: 700;
-  letter-spacing: -0.005em;
-  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+  padding-bottom: 11px;
   color: #fff;
+}
+/* Signature: carry the document's green heading-rule into the builder chrome. */
+.section-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 34px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--brand-primary);
 }
 .section-hint {
   font-size: 14px;
-  color: rgba(234, 241, 245, 0.6);
-  margin: 0 0 18px;
-  line-height: 1.5;
+  color: var(--on-dark-muted);
+  margin: 0 0 22px;
+  line-height: 1.55;
 }
 
 /* Form controls */
@@ -178,7 +192,7 @@ button {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(234, 241, 245, 0.6);
+  color: var(--on-dark-muted);
   margin-bottom: 6px;
 }
 .field__count {
@@ -213,7 +227,7 @@ select {
 }
 input::placeholder,
 textarea::placeholder {
-  color: rgba(234, 241, 245, 0.35);
+  color: rgba(228, 237, 244, 0.5);
 }
 input:focus,
 textarea:focus,
@@ -249,6 +263,7 @@ select option {
 .btn--primary {
   background: var(--brand-primary);
   color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 6px 16px rgba(121, 192, 67, 0.22);
 }
 .btn--primary:hover {
   background: var(--brand-primary-hover);
@@ -372,7 +387,7 @@ select option {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(234, 241, 245, 0.55);
+  color: var(--on-dark-muted);
   margin: 16px 0 8px;
 }
 

@@ -69,6 +69,11 @@
   --text-faint: var(--n-400);
   --text-on-dark: #ffffff;
   --text-on-dark-muted: rgba(255, 255, 255, 0.72);
+  /* On-dark text tiers — tuned for WCAG AA on the navy work surface. */
+  --on-dark-strong: #ffffff;
+  --on-dark: rgba(240, 246, 250, 0.94);
+  --on-dark-muted: rgba(228, 237, 244, 0.78);
+  --on-dark-faint: rgba(212, 226, 235, 0.62);
   --text-link: var(--green-700);
 
   /* Brand */
