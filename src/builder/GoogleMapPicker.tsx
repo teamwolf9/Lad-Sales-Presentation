@@ -162,7 +162,10 @@ export function GoogleMapPicker({
       const cw = el?.clientWidth || 580
       const ch = el?.clientHeight || 640
       const zi = Math.round(zf)
-      const factor = Math.pow(2, zf - zi)
+      // Static tiles render at integer zoom zi. To cover the SAME ground as the
+      // on-screen view (fractional zoom zf), the still's pixel size must scale by
+      // 2^(zi−zf):  W·mpp(zi) = cw·mpp(zf) ⇒ W = cw·2^(zi−zf).
+      const factor = Math.pow(2, zi - zf)
       let w = cw * factor
       let h = ch * factor
       const cap = Math.min(1, 640 / w, 640 / h)
