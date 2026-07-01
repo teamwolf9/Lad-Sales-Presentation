@@ -999,6 +999,12 @@
   font-weight: 600;
   opacity: 0.9;
 }
+/* Right-half pins: label sits to the LEFT of the dot so it can't run off page. */
+.field-marker--flip .field-marker__label {
+  left: auto;
+  right: 1.3cqw;
+  text-align: right;
+}
 .mapsheet__img {
   max-width: 100%;
   max-height: 100%;
