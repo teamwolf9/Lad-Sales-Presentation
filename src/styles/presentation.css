@@ -1053,6 +1053,56 @@
   background: #fff;
 }
 
+/* ---- CAD drawing sheets (DXF renders; DWG shows as attachment) ---- */
+.cadsheet__stage {
+  padding: 26px;
+  background: #fff; /* printed drawings sit on white, not the map mat */
+}
+.cadsheet__img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border: 1px solid var(--navy-600);
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(37, 55, 70, 0.14);
+  padding: 10px;
+}
+.cadsheet__dwg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  text-align: center;
+  padding: 44px 36px;
+  border: 1.5px dashed var(--n-300);
+  border-radius: var(--radius-lg);
+  background: var(--n-50);
+}
+.cadsheet__dwg-badge {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #fff;
+  background: var(--navy-600);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+}
+.cadsheet__dwg-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--text-strong);
+  word-break: break-all;
+}
+.cadsheet__dwg-note {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0;
+}
+
 /* ---- Shared map image + annotation overlay (document, slides, exports) ---- */
 .map-fit {
   width: 100%;

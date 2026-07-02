@@ -29,11 +29,15 @@ import { Text, Area, Num } from './controls'
 import { ProjectEditor } from './ProjectEditor'
 import { HydraulicsCalc } from './HydraulicsCalc'
 import { CalculatorToolkit } from './CalculatorToolkit'
+import { CadStep } from './CadStep'
 
-const STEPS = ['Setup', 'Customer', 'Services', 'Team', 'Map', 'Fields', 'Design', 'Projects', 'Analysis', 'Summary'] as const
+/** Step order mirrors the document's page order: cover → map → CAD →
+ *  services → team → analysis → quotes → summary/terms. */
+const STEPS = ['Setup', 'Customer', 'Map', 'Fields', 'Cad', 'Services', 'Team', 'Design', 'Analysis', 'Projects', 'Summary'] as const
 
-/** Which document section each step is editing — drives the live-preview scroll/highlight. */
-const STEP_SECTIONS: string[] = ['cover', 'cover', 'services', 'team', 'map', 'map', 'projects', 'projects', 'analysis', 'summary']
+/** Which document section each step is editing — drives the live-preview scroll/highlight.
+ *  (Design edits the calculators whose output lands on the Analysis page.) */
+const STEP_SECTIONS: string[] = ['cover', 'cover', 'map', 'map', 'cad', 'services', 'team', 'analysis', 'analysis', 'projects', 'summary']
 
 export function Builder({ onSection }: { onSection?: (key: string) => void }) {
   const { proposal, setProposal, reset } = useProposal()
@@ -298,7 +302,12 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           <button
             key={s}
             className={cls('step', i === step && 'step--active', i < step && 'step--done')}
-            onClick={() => setStep(i)}
+            // Fire onSection directly too, so re-clicking the current step
+            // re-scrolls the preview to its page (the effect only fires on change).
+            onClick={() => {
+              setStep(i)
+              onSection?.(STEP_SECTIONS[i] ?? 'cover')
+            }}
           >
             <span className="step__num">{i < step ? <Icon name="check" size={11} /> : i + 1}</span>
             {s}
@@ -383,8 +392,8 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 2 · SERVICES ---------------------------- */}
-        {step === 2 && (
+        {/* ---------------------------- STEP 5 · SERVICES ---------------------------- */}
+        {step === 5 && (
           <div>
             <h2 className="section-title">Services &amp; message</h2>
             <p className="section-hint">Pick what you'll deliver. These render as the cards on the services page.</p>
@@ -421,8 +430,8 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 3 · TEAM ---------------------------- */}
-        {step === 3 && (
+        {/* ---------------------------- STEP 6 · TEAM ---------------------------- */}
+        {step === 6 && (
           <div>
             <h2 className="section-title">About us &amp; team</h2>
             <p className="section-hint">Your company story and the people on this project. Pre-filled in Lad's voice — edit freely.</p>
@@ -531,8 +540,8 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 4 · MAP ---------------------------- */}
-        {step === 4 && (
+        {/* ---------------------------- STEP 2 · MAP ---------------------------- */}
+        {step === 2 && (
           <div>
             <h2 className="section-title">Field map</h2>
             <p className="section-hint">
@@ -617,8 +626,8 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 5 · FIELDS ---------------------------- */}
-        {step === 5 && (
+        {/* ---------------------------- STEP 3 · FIELDS ---------------------------- */}
+        {step === 3 && (
           <div>
             <h2 className="section-title">Fields &amp; pivots</h2>
             <p className="section-hint">
@@ -694,8 +703,8 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 6 · DESIGN ---------------------------- */}
-        {step === 6 && (
+        {/* ---------------------------- STEP 7 · DESIGN ---------------------------- */}
+        {step === 7 && (
           <div>
             <h2 className="section-title">Design calculators</h2>
             <p className="section-hint">Lad's system-design sheet, built in. Add the calculators this proposal needs — they compute live and can feed the analysis.</p>
@@ -705,8 +714,13 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 7 · PROJECTS ---------------------------- */}
-        {step === 7 && (
+        {/* ---------------------------- STEP 4 · CAD ---------------------------- */}
+        {step === 4 && (
+          <CadStep cad={p.cad} uid={user?.uid} onChange={(next) => setProposal({ ...p, cad: next })} />
+        )}
+
+        {/* ---------------------------- STEP 9 · PROJECTS ---------------------------- */}
+        {step === 9 && (
           <div>
             <h2 className="section-title">Projects</h2>
             <p className="section-hint">Each project is a group of line items with one final cost. Add a project per pump station, mainline, farm, or scope.</p>
@@ -792,8 +806,8 @@ export function Builder({ onSection }: { onSection?: (key: string) => void }) {
           </div>
         )}
 
-        {/* ---------------------------- STEP 9 · SUMMARY ---------------------------- */}
-        {step === 9 && (
+        {/* ---------------------------- STEP 10 · SUMMARY ---------------------------- */}
+        {step === 10 && (
           <div>
             <h2 className="section-title">Summary &amp; terms</h2>
             <p className="section-hint">The investment rollup, payment schedule, page toggles, and acceptance terms.</p>

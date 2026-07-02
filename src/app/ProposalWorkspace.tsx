@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Builder } from '../builder/Builder'
 import { Presentation } from '../presentation/Presentation'
 import { SlideDeck } from '../presentation/SlideDeck'
@@ -75,7 +75,20 @@ function EmailDialog({ onClose }: { onClose: () => void }) {
 
 type View = 'document' | 'slides'
 
-function Preview({ activeSection }: { activeSection: string }) {
+/** When a step's page isn't in the document (toggled off / nothing added yet),
+ *  fall back to the nearest page that IS there, so selecting a step always
+ *  shows a sensible document page. */
+const SECTION_FALLBACKS: Record<string, string[]> = {
+  cad: ['map', 'cover'],
+  map: ['cover'],
+  analysis: ['summary', 'cover'],
+  projects: ['summary', 'cover'],
+  summary: ['cover'],
+  team: ['cover'],
+  services: ['cover'],
+}
+
+function Preview({ activeSection, scrollNonce = 0 }: { activeSection: string; scrollNonce?: number }) {
   const { proposal, setProposal, readOnly } = useProposal()
   const { enabled, profile } = useAuth()
   const [view, setView] = useState<View>('document')
@@ -106,6 +119,7 @@ function Preview({ activeSection }: { activeSection: string }) {
   // so we can re-scroll to a section the moment it appears without yanking on edits.
   const sectionSig = [
     proposal.map.enabled && !!proposal.map.imageUrl,
+    proposal.cad.enabled && proposal.cad.drawings.length,
     proposal.settings.showServices,
     proposal.analysis.enabled,
     proposal.settings.showAbout,
@@ -115,15 +129,21 @@ function Preview({ activeSection }: { activeSection: string }) {
   ].join('|')
 
   // Scroll the live document to the section the current builder step is editing
-  // (and re-run when that section first becomes visible).
+  // (and re-run when that section first becomes visible, or the step is re-clicked).
   useEffect(() => {
     if (view !== 'document') return
     const container = scrollRef.current
-    const target = container?.querySelector<HTMLElement>(`[data-doc-section="${activeSection}"]`)
-    if (!container || !target) return
+    if (!container) return
+    const find = (key: string) => container.querySelector<HTMLElement>(`[data-doc-section="${key}"]`)
+    let target = find(activeSection)
+    for (const fb of SECTION_FALLBACKS[activeSection] ?? []) {
+      if (target) break
+      target = find(fb)
+    }
+    if (!target) return
     const top = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 24
     container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
-  }, [activeSection, view, zoom, sectionSig])
+  }, [activeSection, scrollNonce, view, zoom, sectionSig])
 
   const handlePptx = async () => {
     setExporting(true)
@@ -222,11 +242,15 @@ function Preview({ activeSection }: { activeSection: string }) {
 /** The two-pane editor. Viewers (readOnly) see the preview only. */
 export function ProposalWorkspace() {
   const { readOnly } = useProposal()
-  const [activeSection, setActiveSection] = useState('cover')
+  // Track a nonce alongside the key so re-selecting the same step re-scrolls
+  // the preview to its page. Memoized — Builder's effect depends on this
+  // callback's identity, so an inline arrow would loop.
+  const [active, setActive] = useState({ key: 'cover', n: 0 })
+  const onSection = useCallback((key: string) => setActive((a) => ({ key, n: a.n + 1 })), [])
   return (
     <div className={cls('app', readOnly && 'app--solo')}>
-      {!readOnly && <Builder onSection={setActiveSection} />}
-      <Preview activeSection={activeSection} />
+      {!readOnly && <Builder onSection={onSection} />}
+      <Preview activeSection={active.key} scrollNonce={active.n} />
     </div>
   )
 }

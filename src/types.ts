@@ -234,6 +234,29 @@ export interface MapPage {
   quoteNumber: string
 }
 
+/** One uploaded CAD drawing. DXF renders inline as vector SVG; DWG (a
+ *  proprietary binary format browsers can't decode) is stored and shown as a
+ *  labeled attachment on the page. */
+export interface CadDrawing {
+  id: string
+  /** Original filename, e.g. "PIVOT-LAYOUT.dxf". */
+  name: string
+  kind: 'dxf' | 'dwg'
+  /** Original uploaded file (Storage URL; data URL in standalone mode). */
+  fileUrl: string
+  /** Rendered SVG of the drawing (DXF only; '' for DWG). */
+  svgUrl: string
+  caption: string
+}
+
+/** CAD drawings page — each drawing renders as its own document sheet. */
+export interface CadPage {
+  enabled: boolean
+  drawings: CadDrawing[]
+  designer: string
+  drawnBy: string
+}
+
 /** Payment schedule shown under the investment summary. */
 export interface PaymentSchedule {
   enabled: boolean
@@ -394,6 +417,8 @@ export interface Proposal {
   scopeNotes: string[]
   /** Field-map page. */
   map: MapPage
+  /** CAD drawings page (DXF/DWG uploads). */
+  cad: CadPage
   /** Improvements Analysis page. */
   analysis: Analysis
   /** Design-calculator inputs (friction loss + hydraulic worksheet). */

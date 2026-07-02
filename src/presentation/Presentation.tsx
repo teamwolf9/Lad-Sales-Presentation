@@ -77,6 +77,7 @@ export function Presentation({
 
   // Page visibility
   const showMap = p.map.enabled && !!p.map.imageUrl
+  const cadDrawings = p.cad.enabled ? p.cad.drawings : []
   const showServices = p.settings.showServices
   const showAnalysis =
     p.analysis.enabled && (p.analysis.rows.length > 0 || !!p.analysis.summary || !!p.analysis.conclusion)
@@ -89,6 +90,7 @@ export function Presentation({
   const grandInvestment = investmentTotal(p)
 
   const contentPages =
+    cadDrawings.length +
     (showMap ? 1 : 0) +
     (showServices ? 1 : 0) +
     (showAnalysis ? 1 : 0) +
@@ -222,6 +224,62 @@ export function Presentation({
           <Foot p={p} page={++pageNo} total={totalSheets} />
         </section>
       )}
+
+      {/* ----------------------------- CAD DRAWINGS ----------------------------- */}
+      {cadDrawings.map((d, di) => (
+        <section key={d.id} {...sec('cad', 'sheet mapsheet cadsheet')}>
+          <div className="mapsheet__imgwrap cadsheet__stage">
+            {d.kind === 'dxf' && d.svgUrl ? (
+              <img className="cadsheet__img" src={d.svgUrl} alt={d.caption || d.name} />
+            ) : (
+              <div className="cadsheet__dwg">
+                <span className="cadsheet__dwg-badge">DWG</span>
+                <span className="cadsheet__dwg-name">{d.name}</span>
+                <p className="cadsheet__dwg-note">
+                  AutoCAD drawing file — attached to this proposal. Ask your Lad rep for the
+                  original, or view it in any CAD package.
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="mapsheet__block">
+            <img className="mapsheet__logo" src={B.logos.primary} alt={B.name} />
+            <div className="mapsheet__fields">
+              <div className="mapsheet__f">
+                <span className="k">Customer</span>
+                <span className="v">{p.customer.company || '—'}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Drawing</span>
+                <span className="v">{d.caption || d.name}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">File</span>
+                <span className="v">{d.name}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Sheet</span>
+                <span className="v">
+                  {di + 1} of {cadDrawings.length}
+                </span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Date</span>
+                <span className="v">{formatDate(p.meta.date)}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Designer</span>
+                <span className="v">{p.cad.designer || '—'}</span>
+              </div>
+              <div className="mapsheet__f">
+                <span className="k">Drawn by</span>
+                <span className="v">{p.cad.drawnBy || p.cad.designer || '—'}</span>
+              </div>
+            </div>
+          </div>
+          <Foot p={p} page={++pageNo} total={totalSheets} />
+        </section>
+      ))}
 
       {/* --------------------------- SERVICES + PROOF + SCOPE --------------------------- */}
       {showServices && (

@@ -54,6 +54,12 @@ export function createEmptyProposal(): Proposal {
       date: todayISO(),
       quoteNumber: '',
     },
+    cad: {
+      enabled: false,
+      drawings: [],
+      designer: '',
+      drawnBy: '',
+    },
     analysis: {
       enabled: false,
       heading: 'Improvements Analysis',
@@ -143,6 +149,7 @@ function hydrate(saved: Partial<Proposal>): Proposal {
     customer: { ...base.customer, ...saved.customer },
     preparedBy: { ...base.preparedBy, ...saved.preparedBy },
     map: { ...base.map, ...saved.map },
+    cad: { ...base.cad, ...saved.cad },
     analysis: { ...base.analysis, ...saved.analysis },
     hydraulics: {
       ...base.hydraulics,

@@ -29,6 +29,39 @@ export async function uploadDataUrl(dataUrl: string, uid?: string | null, folder
   return getDownloadURL(r)
 }
 
+/** Read a File as a data URL (standalone-mode fallback for raw uploads). */
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(String(r.result))
+    r.onerror = () => reject(r.error)
+    r.readAsDataURL(file)
+  })
+}
+
+/** Upload a raw file (e.g. a .dxf/.dwg CAD file) unchanged and return its URL.
+ *  Falls back to a data URL in standalone mode. */
+export async function uploadRawFile(file: File, uid?: string | null, folder = 'files'): Promise<string> {
+  if (!firebaseEnabled || !storage || !uid) return fileToDataUrl(file)
+  const safeName = file.name.replace(/[^\w.-]+/g, '_')
+  const path = `users/${uid}/${folder}/${Date.now()}-${safeName}`
+  const r = ref(storage, path)
+  await uploadBytes(r, file, { contentType: file.type || 'application/octet-stream' })
+  return getDownloadURL(r)
+}
+
+/** Upload an SVG document (as text) and return its URL.
+ *  Falls back to a data URL in standalone mode. */
+export async function uploadSvgText(svg: string, uid?: string | null, folder = 'cad'): Promise<string> {
+  if (!firebaseEnabled || !storage || !uid) {
+    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
+  }
+  const path = `users/${uid}/${folder}/${Date.now()}.svg`
+  const r = ref(storage, path)
+  await uploadBytes(r, new Blob([svg], { type: 'image/svg+xml' }), { contentType: 'image/svg+xml' })
+  return getDownloadURL(r)
+}
+
 /** Upload a generated PDF blob and return its download URL. */
 export async function uploadPdf(blob: Blob, uid: string, filename: string): Promise<string> {
   if (!firebaseEnabled || !storage) throw new Error('Storage is not configured')
