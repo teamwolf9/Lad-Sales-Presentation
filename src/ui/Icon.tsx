@@ -92,6 +92,13 @@ const P: Record<string, JSX.Element> = {
     </>
   ),
   check: <path d="m5 12 5 5 9-11" />,
+  back: <path d="M15 5l-7 7 7 7" />,
+  exit: (
+    <>
+      <path d="M14 4h5v16h-5" />
+      <path d="M4 12h10M10 8l4 4-4 4" />
+    </>
+  ),
   sparkle: (
     <>
       <path d="M11 3.5 12.7 8 17 9.7 12.7 11.4 11 16l-1.7-4.6L5 9.7l4.3-1.7L11 3.5Z" />

@@ -1,15 +1,17 @@
 import { useAuth } from '../lib/auth'
+import { Icon } from '../ui/Icon'
 
-/** Role badge + email + sign-out — shown top-right on every signed-in screen. */
+/** Compact account chip — initials avatar (ring = role), email, sign-out. */
 export function AccountInfo() {
   const { profile, signOut } = useAuth()
   if (!profile) return null
+  const initial = (profile.email || '?').charAt(0).toUpperCase()
   return (
-    <div className="acct">
-      <span className={`acct__role acct__role--${profile.role}`}>{profile.role}</span>
+    <div className="acct" title={`${profile.role} · ${profile.email}`}>
+      <span className={`acct__avatar acct__avatar--${profile.role}`}>{initial}</span>
       <span className="acct__email">{profile.email}</span>
-      <button className="btn btn--ghost btn--sm" onClick={() => signOut()}>
-        Sign out
+      <button className="icon-btn acct__out" onClick={() => signOut()} title="Sign out">
+        <Icon name="exit" size={14} />
       </button>
     </div>
   )

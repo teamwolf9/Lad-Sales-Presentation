@@ -46,11 +46,8 @@ button {
 /* Builder — dark navy work surface */
 .builder {
   background:
-    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px),
     radial-gradient(120% 55% at 100% 0%, rgba(121, 192, 67, 0.15), transparent 60%),
     linear-gradient(180deg, var(--navy-600) 0%, var(--navy-800) 100%);
-  background-size: 26px 26px, 26px 26px, auto, auto;
   color: #eaf1f5;
   display: flex;
   flex-direction: column;
@@ -82,55 +79,73 @@ button {
 }
 
 /* Step rail */
+/* Step rail — two columns of five, in step order down each column.
+   One step per row = easy scanning; two columns = form stays above the fold. */
 .steps {
-  display: flex;
-  gap: 4px;
-  padding: 14px 18px 0;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-rows: repeat(5, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px 10px;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 .step {
+  width: 100%;
   font-family: var(--font-semicond);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--on-dark-faint);
-  padding: 7px 11px;
-  border-radius: var(--radius-pill);
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
   background: transparent;
   display: flex;
   align-items: center;
-  gap: 7px;
-  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  justify-content: flex-start;
+  gap: 9px;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
 .step:hover {
   color: #fff;
+  background: rgba(255, 255, 255, 0.055);
 }
 .step__num {
-  width: 18px;
-  height: 18px;
+  width: 21px;
+  height: 21px;
+  flex: none;
   border-radius: var(--radius-pill);
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 10.5px;
+  font-weight: 600;
   font-family: var(--font-mono);
-  background: rgba(255, 255, 255, 0.1);
+  color: rgba(234, 241, 245, 0.85);
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
+/* Current step — tinted row, green badge. */
 .step--active {
   color: #fff;
-  background: var(--brand-primary);
-  border-color: var(--brand-primary);
-  box-shadow: 0 4px 14px rgba(121, 192, 67, 0.34);
+  background: linear-gradient(90deg, rgba(121, 192, 67, 0.18), rgba(121, 192, 67, 0.04));
+  border-color: rgba(121, 192, 67, 0.42);
 }
 .step--active .step__num {
-  background: rgba(14, 22, 29, 0.25);
+  background: var(--accent-grad);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--accent-glow);
 }
+/* Completed steps — green check, still clearly legible. */
 .step--done {
-  color: rgba(234, 241, 245, 0.85);
+  color: var(--on-dark-muted);
 }
 .step--done .step__num {
   background: var(--green-600);
+  border-color: transparent;
   color: #fff;
 }
 
@@ -598,11 +613,8 @@ select option {
 /* --------------------------- Preview pane --------------------------- */
 .preview {
   background:
-    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    radial-gradient(80% 50% at 50% -10%, rgba(121, 192, 67, 0.08), transparent),
+    radial-gradient(80% 50% at 50% -10%, rgba(121, 192, 67, 0.07), transparent),
     var(--navy-800);
-  background-size: 30px 30px, 30px 30px, auto, auto;
   overflow: hidden;
   display: flex;
   flex-direction: column;
