@@ -39,15 +39,19 @@ function fileToDataUrl(file: File): Promise<string> {
   })
 }
 
-/** Upload a raw file (e.g. a .dxf/.dwg CAD file) unchanged and return its URL.
- *  Falls back to a data URL in standalone mode. */
-export async function uploadRawFile(file: File, uid?: string | null, folder = 'files'): Promise<string> {
-  if (!firebaseEnabled || !storage || !uid) return fileToDataUrl(file)
+/** Upload a raw file (e.g. a .dxf/.dwg CAD file) unchanged. Returns its URL
+ *  and Storage path ('' in standalone mode, where the URL is a data URL). */
+export async function uploadRawFile(
+  file: File,
+  uid?: string | null,
+  folder = 'files',
+): Promise<{ url: string; path: string }> {
+  if (!firebaseEnabled || !storage || !uid) return { url: await fileToDataUrl(file), path: '' }
   const safeName = file.name.replace(/[^\w.-]+/g, '_')
   const path = `users/${uid}/${folder}/${Date.now()}-${safeName}`
   const r = ref(storage, path)
   await uploadBytes(r, file, { contentType: file.type || 'application/octet-stream' })
-  return getDownloadURL(r)
+  return { url: await getDownloadURL(r), path }
 }
 
 /** Upload an SVG document (as text) and return its URL.

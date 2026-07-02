@@ -229,7 +229,7 @@ export function Presentation({
       {cadDrawings.map((d, di) => (
         <section key={d.id} {...sec('cad', 'sheet mapsheet cadsheet')}>
           <div className="mapsheet__imgwrap cadsheet__stage">
-            {d.kind === 'dxf' && d.svgUrl ? (
+            {d.svgUrl ? (
               <img className="cadsheet__img" src={d.svgUrl} alt={d.caption || d.name} />
             ) : (
               <div className="cadsheet__dwg">

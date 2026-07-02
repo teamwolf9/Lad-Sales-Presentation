@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import type { CadPage } from '../types'
 import { Icon } from '../ui/Icon'
-import { importCadFile } from '../lib/cad'
+import { importCadFile, renderDwg } from '../lib/cad'
 import { Text } from './controls'
 
 /** Cad step — upload DXF/DWG drawings; each becomes its own document page. */
@@ -16,7 +16,23 @@ export function CadStep({
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
+  const [renderingId, setRenderingId] = useState<string | null>(null)
   const patch = (p: Partial<CadPage>) => onChange({ ...cad, ...p })
+
+  // Convert an already-attached DWG (e.g. added before conversion existed).
+  const onRenderDwg = async (id: string) => {
+    const drawing = cad.drawings.find((d) => d.id === id)
+    if (!drawing) return
+    setRenderingId(id)
+    try {
+      const next = await renderDwg(drawing, ownerUid)
+      onChange({ ...cad, drawings: cad.drawings.map((d) => (d.id === id ? next : d)) })
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not render this DWG.')
+    } finally {
+      setRenderingId(null)
+    }
+  }
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
@@ -94,15 +110,26 @@ export function CadStep({
                 <Icon name="trash" size={14} />
               </button>
             </div>
-            {d.kind === 'dxf' && d.svgUrl ? (
+            {d.svgUrl ? (
               <div className="upload-thumb upload-thumb--wide cadfile__thumb">
                 <img src={d.svgUrl} alt={d.name} />
               </div>
             ) : (
-              <p className="cadfile__note">
-                Stored with the proposal (no browser preview for DWG). It appears on the page as a
-                labeled attachment.
-              </p>
+              <>
+                <p className="cadfile__note">
+                  No drawing preview yet — render it to show the linework on the CAD page instead
+                  of an attachment card.
+                </p>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  style={{ marginBottom: 10 }}
+                  onClick={() => onRenderDwg(d.id)}
+                  disabled={renderingId === d.id}
+                >
+                  <Icon name="drafting" size={14} />
+                  {renderingId === d.id ? 'Rendering…' : 'Render preview'}
+                </button>
+              </>
             )}
             <Text
               label="Caption"

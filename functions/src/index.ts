@@ -13,7 +13,15 @@
  */
 import { onCall, HttpsError } from 'firebase-functions/v2/https'
 import { defineSecret } from 'firebase-functions/params'
+import { initializeApp } from 'firebase-admin/app'
+import { getStorage } from 'firebase-admin/storage'
+import { convertDwgToDxf } from 'dwg2dxf-converter'
+import { tmpdir } from 'os'
+import { join } from 'path'
+import { unlink } from 'fs/promises'
 import Anthropic from '@anthropic-ai/sdk'
+
+initializeApp()
 
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY')
 
@@ -118,5 +126,52 @@ export const draftScopeSummary = onCall(
     }
 
     return { text, model: response?.model ?? MODEL }
+  },
+)
+
+/**
+ * Convert an uploaded DWG (proprietary binary) to DXF so the browser can
+ * render it as vector linework on the proposal's CAD page. Uses GNU LibreDWG
+ * compiled to WebAssembly (dwg2dxf-converter) — no native deps, runs entirely
+ * inside the function. The DXF is written back to Storage next to the DWG and
+ * its path returned; the client fetches it and renders SVG locally.
+ */
+export const convertDwg = onCall(
+  { region: 'us-central1', memory: '1GiB', timeoutSeconds: 120 },
+  async (request): Promise<{ dxfPath: string }> => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to convert CAD files.')
+    }
+    const path = String((request.data as { path?: unknown })?.path ?? '')
+    // Owner-scoped: only the caller's own cad/ folder, only .dwg files.
+    const prefix = `users/${request.auth.uid}/cad/`
+    if (!path.startsWith(prefix) || !path.toLowerCase().endsWith('.dwg') || path.includes('..')) {
+      throw new HttpsError('permission-denied', 'Invalid CAD file path.')
+    }
+
+    const bucket = getStorage().bucket()
+    const stamp = Date.now()
+    const tmpIn = join(tmpdir(), `in-${stamp}.dwg`)
+    const tmpOut = join(tmpdir(), `out-${stamp}.dxf`)
+    try {
+      await bucket.file(path).download({ destination: tmpIn })
+      const result = await convertDwgToDxf(tmpIn, tmpOut)
+      if (!result?.success) {
+        throw new HttpsError(
+          'failed-precondition',
+          `Could not convert this DWG (${result?.error ?? 'unsupported or corrupt file'}). ` +
+            'Try exporting DXF from your CAD software instead.',
+        )
+      }
+      const dxfPath = `${path}.dxf`
+      await bucket.upload(tmpOut, { destination: dxfPath, contentType: 'application/dxf' })
+      return { dxfPath }
+    } catch (err) {
+      if (err instanceof HttpsError) throw err
+      console.error('[convertDwg] failed', err)
+      throw new HttpsError('internal', 'DWG conversion failed. Try exporting DXF from your CAD software.')
+    } finally {
+      await Promise.allSettled([unlink(tmpIn), unlink(tmpOut)])
+    }
   },
 )
